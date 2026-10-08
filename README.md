@@ -47,6 +47,19 @@ Ground link: configuration / telemetry; outside the visual-control loop
 - `LIVE_STREAM` ignores new input while busy. Buffering and observation age still need explicit handling.
 - Training happens on a workstation; the aircraft runs inference. Pi 5 compatibility, frame rate, latency and thermal behavior require bench validation.
 
+## Proposed training pipeline
+
+MediaPipe remains pretrained. The learned component is the small PPO motion policy; training happens on a workstation, while the Pi runs actor inference.
+
+1. **Measure the real pipeline.** Benchmark camera / pose timing, landmark quality and command-response lag. Calibrate camera geometry, choose a desired torso scale, and define the feature order, filtering and normalization.
+2. **Build the simulation.** Use a fast Gymnasium environment to project a simulated torso into camera coordinates and perturb those landmarks with measured noise, delays and missed frames. Keep privileged target coordinates out of the actor's observations. Validate the same policy in PX4 SITL / Gazebo with camera frames and the actual pose pipeline; first check that the rendered person can be detected.
+3. **Specify episodes and rewards.** Randomize initial bearing, range and target trajectories. Begin with slow, clean pursuit, then add turns, stops, delay, frame loss, body rotation and response lag. For valid observations, a candidate reward is `r = -wx * ex² - ws * es² - wΔ * ||a_t - a_(t-1)||²`. Handle missing observations explicitly, and test separate target-loss and boundary penalties. End on sustained loss or proximity / boundary violations; mark time limits as truncations.
+4. **Train PPO.** Collect fresh parallel rollouts, estimate advantages with the critic, then update the actor using PPO's clipped objective. Record seeds, complete configurations, reward components and checkpoints. A small MLP can be trained on a workstation CPU; profile before assuming GPU acceleration is necessary.
+5. **Evaluate independently.** Select checkpoints on validation scenarios and freeze them before held-out testing. Compare multiple PPO training seeds with tuned PID under matched observations, limits and supervision. Report tracking error, retention, smoothness and failures rather than training reward alone.
+6. **Package and transfer.** Ship actor weights, normalization statistics, feature schema and action scaling together. Verify workstation / Pi action agreement on recorded observations, then progress through SITL, bench tests and supervised fixed-altitude trials. Use deterministic actor inference on the Pi; keep the critic and optimizer off the aircraft.
+
+This is a proposed workflow, not an implemented trainer. Reward coefficients, network size, update interval and randomization ranges remain experimental choices. Record them for every run and freeze final evaluation settings in advance.
+
 ## Proposed roadmap and exit gates
 
 All stages in this suggested ten-week sequence remain planned.
@@ -88,6 +101,10 @@ The English-language website includes responsive layouts, keyboard-accessible co
 - [Pi camera cable](https://www.raspberrypi.com/products/camera-cable/)
 - [MAVSDK Offboard](https://mavsdk.mavlink.io/main/en/cpp/guide/offboard.html)
 - [PX4 Offboard and failsafes](https://docs.px4.io/main/en/flight_modes/offboard)
+- [Gymnasium custom environments](https://gymnasium.farama.org/introduction/create_custom_env/)
+- [Stable-Baselines3 PPO](https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html)
+- [PPO paper](https://arxiv.org/abs/1707.06347)
+- [PX4 Gazebo simulation](https://docs.px4.io/main/en/sim_gazebo_gz/)
 
 ## License
 

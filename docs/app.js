@@ -32,6 +32,8 @@
   function draw() {
     if (!ctx) return;
     const width = 700, height = 560;
+    const pixelScale = width / (canvas.clientWidth || width);
+    const chartFont = size => `${Math.round(size * pixelScale)}px Consolas, monospace`;
     const error = Number(xInput.value)/100, scale = Number(scaleInput.value)/100;
     const centerX = .5 + error, centerY = .5;
     ctx.clearRect(0,0,width,height);
@@ -46,8 +48,8 @@
     ctx.setLineDash([]);
     ctx.strokeStyle='#b6c2d5';ctx.lineWidth=1.4;
     ctx.beginPath();ctx.arc(width*.5,height*centerY,9,0,Math.PI*2);ctx.stroke();
-    ctx.font='12px Consolas, monospace';ctx.fillStyle='#8190a6';
-    ctx.fillText('0.0',36,height-22);ctx.fillText('0.5',width*.5-10,height-22);ctx.fillText('1.0',width-48,height-22);
+    ctx.font=chartFont(16);ctx.fillStyle='#52627e';
+    ctx.fillText('0.0',16*pixelScale,height-14*pixelScale);ctx.textAlign='center';ctx.fillText('0.5',width*.5,height-14*pixelScale);ctx.textAlign='right';ctx.fillText('1.0',width-16*pixelScale,height-14*pixelScale);ctx.textAlign='left';
 
     const points=landmarks.map(([x,y],index)=>{
       const sway=playing&&!torso.has(index)&&index>12 ? Math.sin(phase*3+index*.7)*.009 : 0;
@@ -69,18 +71,22 @@
     ctx.fillStyle='#1435ee';ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
     ctx.setLineDash([4,5]);ctx.strokeStyle='#6382e4';ctx.lineWidth=1;
     ctx.strokeRect(cx-.196*width*scale,cy-.29*height*scale,.392*width*scale,.70*height*scale);ctx.setLineDash([]);
-    ctx.font='13px Consolas, monospace';ctx.fillStyle='#1435ee';
-    const labelX = error>.12 ? cx-140 : cx+22;
-    ctx.fillText(`e_x = ${signed(error)}`,labelX,cy-16);
-    ctx.font='11px Consolas, monospace';ctx.fillStyle='#7a8db0';
-    ctx.fillText('11',points[11][0]-24,points[11][1]-10);ctx.fillText('12',points[12][0]+10,points[12][1]-10);
-    ctx.fillText('23',points[23][0]-24,points[23][1]+20);ctx.fillText('24',points[24][0]+10,points[24][1]+20);
+    ctx.font=chartFont(16);ctx.fillStyle='#1435ee';
+    const label = `e_x = ${signed(error)}`;
+    const labelWidth = ctx.measureText(label).width;
+    const labelX = cx + 14*pixelScale + labelWidth > width-15*pixelScale ? cx-labelWidth-14*pixelScale : cx+14*pixelScale;
+    ctx.fillText(label,labelX,cy-18*pixelScale);
+    if(canvas.clientWidth>=500){
+      ctx.font=chartFont(16);ctx.fillStyle='#52627e';
+      ctx.fillText('11',points[11][0]-35*pixelScale,points[11][1]-12*pixelScale);ctx.fillText('12',points[12][0]+10*pixelScale,points[12][1]-12*pixelScale);
+      ctx.fillText('23',points[23][0]-35*pixelScale,points[23][1]+23*pixelScale);ctx.fillText('24',points[24][0]+10*pixelScale,points[24][1]+23*pixelScale);
+    }
     ctx.globalAlpha=1;
     if(occluded){
-      ctx.fillStyle='#f4f6faf0';ctx.fillRect(100,height*.37,width-200,110);
-      ctx.fillStyle='#a45135';ctx.textAlign='center';ctx.font='17px "Segoe UI", "Microsoft YaHei", sans-serif';
-      ctx.fillText('Invalid observation · hold / handover',width*.5,height*.46);
-      ctx.font='12px Consolas, monospace';ctx.fillStyle='#8290a5';ctx.fillText('PROPOSED SUPERVISOR RESPONSE',width*.5,height*.46+27);ctx.textAlign='left';
+      ctx.fillStyle='#f4f6faf0';ctx.fillRect(20*pixelScale,cy-48*pixelScale,width-40*pixelScale,100*pixelScale);
+      ctx.fillStyle='#984526';ctx.textAlign='center';ctx.font=`${Math.round(18*pixelScale)}px "Segoe UI", sans-serif`;
+      ctx.fillText('Target temporarily lost',width*.5,cy-8*pixelScale);
+      ctx.font=chartFont(16);ctx.fillStyle='#52627e';ctx.fillText('HOLD / HANDOVER',width*.5,cy+20*pixelScale);ctx.textAlign='left';
     }
     document.getElementById('x-output').textContent=occluded?'—':signed(error);
     document.getElementById('scale-output').textContent=occluded?'—':`${scale.toFixed(2)}×`;
@@ -111,7 +117,9 @@
       entries.forEach(entry=>{if(entry.isIntersecting){navigationLinks.forEach(link=>{const active=link.hash===`#${entry.target.id}`;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');});}});
     },{rootMargin:'-20% 0px -60% 0px'});
     navigationLinks.forEach(link=>{const section=document.querySelector(link.hash);if(section)observer.observe(section);});
+    observer.observe(document.getElementById('top'));
   }
   updateControls();
   draw();
+  if('ResizeObserver' in window){new ResizeObserver(draw).observe(canvas);}
 })();
