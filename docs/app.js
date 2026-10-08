@@ -1,7 +1,5 @@
 (() => {
   'use strict';
-  const translatable = [...document.querySelectorAll('[data-en]')].map(element => ({element, zh: element.innerHTML, en: element.dataset.en}));
-  const languageButton = document.getElementById('language');
   const canvas = document.getElementById('pose-canvas');
   const ctx = canvas.getContext('2d');
   const xInput = document.getElementById('target-x');
@@ -9,7 +7,7 @@
   const playButton = document.getElementById('animate-demo');
   const occludeButton = document.getElementById('occlude-demo');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let language = 'zh', playing = false, occluded = false, animationFrame = null, phase = 0, lastTime = null;
+  let playing = false, occluded = false, animationFrame = null, phase = 0, lastTime = null;
 
   // A synthetic landmark chart, not a camera feed or a learned controller.
   // Indices follow the MediaPipe Pose landmark convention.
@@ -21,29 +19,14 @@
   const connections = [[0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],[11,12],[11,13],[13,15],[15,17],[15,19],[15,21],[17,19],[12,14],[14,16],[16,18],[16,20],[16,22],[18,20],[11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28],[27,29],[29,31],[27,31],[28,30],[30,32],[28,32]];
   const torso = new Set([11,12,23,24]);
   const signed = number => `${number >= 0 ? '+' : ''}${number.toFixed(2)}`;
-  const t = (zh, en) => language === 'zh' ? zh : en;
 
   function updateControls() {
-    playButton.textContent = playing ? t('暂停运动','Pause motion') : t('播放运动','Play motion');
+    playButton.textContent = playing ? 'Pause motion' : 'Play motion';
     playButton.setAttribute('aria-pressed', String(playing));
-    occludeButton.textContent = occluded ? t('恢复目标','Restore target') : t('遮挡目标','Occlude target');
+    occludeButton.textContent = occluded ? 'Restore target' : 'Occlude target';
     occludeButton.setAttribute('aria-pressed', String(occluded));
-    xInput.setAttribute('aria-valuetext', t(`水平偏差 ${signed(Number(xInput.value)/100)}`,`Horizontal error ${signed(Number(xInput.value)/100)}`));
-    scaleInput.setAttribute('aria-valuetext', t(`相对尺度 ${(Number(scaleInput.value)/100).toFixed(2)} 倍`,`Relative scale ${(Number(scaleInput.value)/100).toFixed(2)} times`));
-  }
-
-  function setLanguage(next) {
-    language = next === 'en' ? 'en' : 'zh';
-    document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
-    translatable.forEach(({element, zh, en}) => { element.innerHTML = language === 'zh' ? zh : en; });
-    languageButton.textContent = language === 'zh' ? 'EN' : '中文';
-    languageButton.setAttribute('aria-label', t('Switch to English','切换为中文'));
-    document.title = t('PosePilot — 机载单人视觉追踪','PosePilot — Onboard Visual Pursuit');
-    document.querySelector('meta[name="description"]').content = t('PosePilot：基于 MediaPipe Pose、PPO 与 PX4 的全机载单人视觉追踪研究方案。','PosePilot: an open research design for onboard single-person drone tracking with MediaPipe Pose, PPO, Raspberry Pi 5 and PX4.');
-    canvas.setAttribute('aria-label', t('合成人体关键点可视化，展示躯干中心相对画面中心的位置。','Synthetic pose landmark chart showing torso position relative to the center of an image.'));
-    try { localStorage.setItem('posepilot-language', language); } catch { /* Storage is optional. */ }
-    updateControls();
-    draw();
+    xInput.setAttribute('aria-valuetext', `Horizontal error ${signed(Number(xInput.value)/100)}`);
+    scaleInput.setAttribute('aria-valuetext', `Relative scale ${(Number(scaleInput.value)/100).toFixed(2)} times`);
   }
 
   function draw() {
@@ -96,12 +79,12 @@
     if(occluded){
       ctx.fillStyle='#f4f6faf0';ctx.fillRect(100,height*.37,width-200,110);
       ctx.fillStyle='#a45135';ctx.textAlign='center';ctx.font='17px "Segoe UI", "Microsoft YaHei", sans-serif';
-      ctx.fillText(t('观测无效 · 请求悬停 / 接管','Invalid observation · hold / handover'),width*.5,height*.46);
+      ctx.fillText('Invalid observation · hold / handover',width*.5,height*.46);
       ctx.font='12px Consolas, monospace';ctx.fillStyle='#8290a5';ctx.fillText('PROPOSED SUPERVISOR RESPONSE',width*.5,height*.46+27);ctx.textAlign='left';
     }
     document.getElementById('x-output').textContent=occluded?'—':signed(error);
     document.getElementById('scale-output').textContent=occluded?'—':`${scale.toFixed(2)}×`;
-    document.getElementById('state-output').textContent=occluded?t('丢失','Lost'):t('有效','Valid');
+    document.getElementById('state-output').textContent=occluded?'Lost':'Valid';
     document.getElementById('state-output').style.color=occluded?'#a45135':'#1435ee';
     updateControls();
   }
@@ -119,7 +102,6 @@
   scaleInput.addEventListener('input',()=>{stop();draw();});
   playButton.addEventListener('click',()=>{if(playing)stop();else{playing=true;lastTime=null;updateControls();animationFrame=requestAnimationFrame(animate);}});
   occludeButton.addEventListener('click',()=>{occluded=!occluded;draw();});
-  languageButton.addEventListener('click',()=>setLanguage(language==='zh'?'en':'zh'));
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing)stop();});
   reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)stop();});
 
@@ -130,6 +112,6 @@
     },{rootMargin:'-20% 0px -60% 0px'});
     navigationLinks.forEach(link=>{const section=document.querySelector(link.hash);if(section)observer.observe(section);});
   }
-  let stored='zh';try{stored=localStorage.getItem('posepilot-language')||'zh';}catch{/* Default remains Chinese. */}
-  setLanguage(stored);
+  updateControls();
+  draw();
 })();
