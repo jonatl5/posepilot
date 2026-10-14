@@ -76,13 +76,13 @@ This is a proposed workflow, not an implemented trainer. Reward coefficients, ne
 
 ## Proposed roadmap and exit gates
 
-All stages in this suggested ten-week sequence remain planned. Week-by-week progress is recorded on the [progress page](https://jonatl5.github.io/posepilot/log.html).
+All stages in this suggested ten-week sequence, weeks 3–12, remain planned. Weeks 1–2 covered project planning and component research. Week-by-week progress is recorded on the [progress page](https://jonatl5.github.io/posepilot/log.html).
 
-1. **Weeks 1–2: perception bench tests and IR camera choice.** Bring up the TT video stream and Pose on the laptop. Measure frame age, Wi-Fi delay, inference time, landmark validity and dropped frames in good and poor light, and bench-test IR camera options.
-2. **Weeks 3–4: simulation and baseline.** Build a pursuit simulation matched to the TT's measured `rc` response, observations and action limits, then tune a PID baseline.
-3. **Weeks 5–6: PPO training.** Randomize visual noise, delay, lighting, target motion and missed observations. Evaluate on held-out seeds.
-4. **Weeks 7–8: full-system integration.** Mount the IR camera, connect the policy to `rc` commands and test timestamps, command limits, stale observations, Wi-Fi loss and manual takeover with propellers removed.
-5. **Weeks 9–10: controlled trials.** Start with slow motion at fixed altitude in a clear indoor area, first in good light and then in dim light. Compare repeated runs and publish logs, configurations and limitations.
+1. **Weeks 3–4: perception bench tests and IR camera choice.** Bring up the TT video stream and Pose on the laptop. Measure frame age, Wi-Fi delay, inference time, landmark validity and dropped frames in good and poor light, and bench-test IR camera options.
+2. **Weeks 5–6: simulation and baseline.** Build a pursuit simulation matched to the TT's measured `rc` response, observations and action limits, then tune a PID baseline.
+3. **Weeks 7–8: PPO training.** Randomize visual noise, delay, lighting, target motion and missed observations. Evaluate on held-out seeds.
+4. **Weeks 9–10: full-system integration.** Mount the IR camera, connect the policy to `rc` commands and test timestamps, command limits, stale observations, Wi-Fi loss and manual takeover with propellers removed.
+5. **Weeks 11–12: controlled trials.** Start with slow motion at fixed altitude in a clear indoor area, first in good light and then in dim light. Compare repeated runs and publish logs, configurations and limitations.
 
 Compare PPO with tuned PID using center / scale error, capture-to-command latency (median and p95), command smoothness, target retention and recovery time, in both good and low light. Performance and PPO advantages have not yet been established.
 
