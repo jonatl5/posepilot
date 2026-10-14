@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1435ee">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css?v=training-readable-1">
+  <title>PosePilot — Progress</title>
+  <style>
+    .log-entry .timeline-body dl{display:grid;grid-template-columns:110px 1fr;gap:8px 18px;margin:16px 0 0;font-size:.9rem;line-height:1.8}
+    .log-entry dt{font-family:var(--mono);color:#53637d}
+    .log-entry dd{margin:0;color:var(--ink)}
+    .log-entry dd:empty::before{content:"—";color:#a0a8b6}
+    .nav a[aria-current=page]{color:var(--blue)}
+    .planned.done{color:#2d6a12;border-color:#b7e08a;background:#f1fbe6}
+    .planned.active{color:var(--blue);border-color:#c5d0fb;background:#f2f5ff}
+    @media(max-width:600px){.log-entry .timeline-body dl{grid-template-columns:1fr;gap:2px}.log-entry dd{margin-bottom:8px}}
+  </style>
+</head>
+<body>
+  <!--
+    Weekly progress log, linked as "Progress" in the main site's navigation.
+    To fill in a week: edit its <dd> fields below. Empty fields show a dash.
+    Status pill: class="planned" (Not started), "planned active" (In progress), "planned done" (Done).
+  -->
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="./" aria-label="PosePilot home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>PosePilot<span class="brand-tag">RESEARCH</span></a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="./#architecture">Architecture</a>
+        <a href="./#training">Training</a>
+        <a href="./#hardware">Hardware</a>
+        <a href="./#roadmap">Roadmap</a>
+        <a href="./log.html" aria-current="page">Progress</a>
+      </nav>
+      <div class="header-actions"><a class="repo-link" href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true"></span></a></div>
+    </div>
+  </header>
+  <main id="main">
+    <section class="section-wrap content-section">
+      <div class="section-heading"><div><div class="eyebrow">PROGRESS / WEEKLY LOG</div><h2>What we did, week by week.</h2></div><p>Weekly progress notes. Each week lists the plan, what got done, what got in the way and what comes next.</p></div>
+      <ol class="timeline">
+        <li class="log-entry"><div class="timeline-time">W01</div><div class="timeline-body"><h3>Initial project plan</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd>Decide what the project is and how we will approach it.</dd><dt>Done</dt><dd>Agreed on the initial project plan: a drone that follows one person using MediaPipe Pose, with a PPO policy turning pose into motion.</dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd>Research the components the project needs.</dd></dl></div><span class="planned done">Done</span></li>
+        <li class="log-entry"><div class="timeline-time">W02</div><div class="timeline-body"><h3>Researching components</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd>Work out exactly what the project needs, including hardware and components.</dd><dt>Done</dt><dd>Researched the platform, cameras and other components.</dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned done">Done</span></li>
+        <li class="log-entry"><div class="timeline-time">W03</div><div class="timeline-body"><h3>Week 3</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+        <li class="log-entry"><div class="timeline-time">W04</div><div class="timeline-body"><h3>Week 4</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+        <li class="log-entry"><div class="timeline-time">W05</div><div class="timeline-body"><h3>Week 5</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+        <li class="log-entry"><div class="timeline-time">W06</div><div class="timeline-body"><h3>Week 6</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+        <li class="log-entry"><div class="timeline-time">W07</div><div class="timeline-body"><h3>Week 7</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+        <li class="log-entry"><div class="timeline-time">W08</div><div class="timeline-body"><h3>Week 8</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+        <li class="log-entry"><div class="timeline-time">W09</div><div class="timeline-body"><h3>Week 9</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+        <li class="log-entry"><div class="timeline-time">W10</div><div class="timeline-body"><h3>Week 10</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
+      </ol>
+    </section>
+  </main>
+  <footer class="footer section-wrap"><div><a class="footer-brand" href="./">PosePilot</a><span>Weekly progress log.</span></div><div><a href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">Repository </a><span>© 2026 jonatl5 · MIT</span></div></footer>
+</body>
+</html>
