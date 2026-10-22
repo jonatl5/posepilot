@@ -111,7 +111,7 @@
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing)stop();});
   reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)stop();});
 
-  const navigationLinks=[...document.querySelectorAll('.nav a')];
+  const navigationLinks=[...document.querySelectorAll('.nav a')].filter(link=>link.hash);
   if('IntersectionObserver' in window){
     const observer=new IntersectionObserver(entries=>{
       entries.forEach(entry=>{if(entry.isIntersecting){navigationLinks.forEach(link=>{const active=link.hash===`#${entry.target.id}`;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');});}});
