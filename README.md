@@ -2,7 +2,7 @@
 
 **Day-and-night single-person visual pursuit**
 
-[Project website](https://jonatl5.github.io/posepilot/) · [Weekly progress](https://jonatl5.github.io/posepilot/log.html)
+[Project website](https://jonatl5.github.io/posepilot/) · [Weekly progress](https://jonatl5.github.io/posepilot/log.html) · [Task list](TASKS.md)
 
 PosePilot explores how human pose perception, compact state estimation and reinforcement learning can help a small drone follow one person, in good light and in low light. The platform is a DJI RoboMaster TT: its built-in camera covers good light, and an added infrared camera keeps the person visible as light drops. The TT streams video over Wi-Fi to a ground laptop, which runs perception, the policy and the supervisor and sends velocity commands back through the Tello SDK.
 
