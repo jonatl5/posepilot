@@ -1,100 +1,85 @@
 # PosePilot
 
-**Day-and-night single-person visual pursuit**
+**Spot the object. Fly to it.**
 
 [Project website](https://jonatl5.github.io/posepilot/) · [Weekly progress](https://jonatl5.github.io/posepilot/log.html) · [Task list](TASKS.md)
 
-PosePilot explores how human pose perception, compact state estimation and reinforcement learning can help a small drone follow one person, in good light and in low light. The platform is a DJI RoboMaster TT: its built-in camera covers good light, and an added infrared camera keeps the person visible as light drops. The TT streams video over Wi-Fi to a ground laptop, which runs perception, the policy and the supervisor and sends velocity commands back through the Tello SDK.
+PosePilot is a DJI RoboMaster TT that recognizes an object, flies up to it and hovers in front of it. A pretrained object detector finds the object in the TT's camera feed; a small reinforcement-learning (PPO) policy turns the object's position and size into steering commands. Everything runs on a laptop connected to the TT over Wi-Fi.
 
-**Status: system design and project website.** This repository contains the website source and research plan. Flight-control software, a trained PPO policy, the IR camera choice and measured flight results are pending. The interactive visualization uses synthetic landmarks and runs no camera, MediaPipe model or PPO policy.
+**Status: design stage.** This repository holds the website and the plan. Detection code, a trained policy and flight results are still to come. The website demo is synthetic: no camera, detector or policy runs.
 
-## Latest architecture
+## Scope
 
-| Layer | Proposed configuration | Role |
-| --- | --- | --- |
-| Flight platform | DJI RoboMaster TT (87 g), Tello SDK 3.0 | Flight stabilization and downward vision positioning; accepts `rc` velocity commands over Wi-Fi |
-| Visible camera | Built-in camera, 720p30, 82.6° FOV | Main input in good light, streamed to the laptop |
-| Infrared camera | Model to be chosen, on the TT's 14-pin expansion port (I2C, UART, SPI, GPIO, PWM) | Low-light and night input |
-| Compute | Ground laptop, Python | Pose, camera fusion, state estimation, policy inference and supervision |
-| Perception | MediaPipe Pose Landmarker, `num_poses = 1` | Extract 33 body landmarks |
-| State estimation | EMA / Kalman, to be compared | Center, apparent scale, rates, observation validity and source camera |
-| Learned policy | Small PPO Actor MLP, to be trained | Forward velocity and yaw rate |
-| Control interface | Tello SDK `rc` commands over Wi-Fi | Send bounded velocity commands to the TT |
+- **Targets:** any of a few common object classes (e.g. backpack, bottle, chair) from a pretrained detector.
+- **Task:** the object stays still. The drone turns to center it, flies forward and stops at a set distance, facing it.
+- **Lighting:** daylight / normal indoor lighting only.
+- **Actions:** two outputs, forward speed and turn rate. Altitude is held by a separate loop.
+
+## How it works
 
 ```text
-RoboMaster TT
-├─ Built-in camera ─┐
-└─ IR camera ───────┤ Wi-Fi video
-                    ▼
-              Ground laptop
-              ├─ MediaPipe Pose
-              ├─ Camera fusion + state estimator
-              ├─ PPO Actor (inference)
-              └─ Supervisor + altitude loop
-                    │ Wi-Fi / Tello SDK rc
-                    ▼
-        RoboMaster TT flight controller
-                    │
-                  motors
-
-Laptop / workstation: simulation + training + analysis
-Wi-Fi link: inside the visual-control loop; delay and dropouts must be measured
+RoboMaster TT camera ──Wi-Fi video──> Laptop
+                                      ├─ Object detector (e.g. YOLO) → bounding box
+                                      ├─ State: box center + size, smoothed
+                                      ├─ PPO policy → forward speed, turn rate
+                                      └─ Supervisor: limits, min distance, search, land
+                                            │ Wi-Fi / Tello SDK rc
+                                            ▼
+                                      RoboMaster TT
 ```
 
-### IR camera options
+| Part | Choice | Job |
+| --- | --- | --- |
+| Drone | DJI RoboMaster TT (87 g, ~8 min flights) | Flies and takes `rc` velocity commands over Wi-Fi |
+| Camera | Built-in, 720p30, 82.6° FOV | Sees the object |
+| Detector | Pretrained, e.g. Ultralytics YOLO or MediaPipe Object Detector | Finds the object and its bounding box |
+| Policy | Small PPO MLP, trained in simulation | Chooses forward speed and turn rate |
+| Laptop | Python | Runs detection, policy and supervisor |
 
-The IR camera is not chosen yet. The two main options trade off differently:
+## What the policy sees
 
-- **Thermal (LWIR)** works in full darkness but has low resolution, and MediaPipe Pose is not trained on thermal images.
-- **Night vision with IR LEDs** produces images closer to normal grayscale video, so MediaPipe is more likely to work, but range is short and the LEDs add weight and draw power.
+| Feature | Meaning |
+| --- | --- |
+| `ex`, `ey` | How far the box center is from the image center |
+| `es` | Box size vs. the size at hover distance (distance proxy) |
+| rates | How fast those are changing |
+| `c` | Detection confidence |
+| `a(t-1)` | Last commands sent |
 
-Either way, weight, power draw and data rate must fit the TT, and MediaPipe's accuracy on the chosen IR images must be tested.
+The goal is reached when the box is centered and at hover size. Box size depends on the object class and viewing angle, so the hover size is calibrated per class.
 
-## Research scope
+## Training
 
-- A single visible person in the scene; identity matching across multiple people is outside the initial scope.
-- The first policy learns forward velocity and yaw rate, with altitude maintained by a separate loop.
-- Shoulders and hips provide the torso center and shoulder-width scale. Candidate features include rates, landmark quality, observation age, the source camera and previous commands.
-- Whether to switch between the visible and IR cameras or fuse both is an open question.
-- Apparent size is a distance proxy affected by body rotation and occlusion. Hip-relative world landmarks do not directly measure camera-to-person range.
-- `min_tracking_confidence` is a configuration threshold, not an assumed independent result score. Landmark visibility / presence can inform quality checks.
-- Video arrives over Wi-Fi and `LIVE_STREAM` ignores new input while busy. Buffering and observation age still need explicit handling.
-- DJI rates the TT's flight time at about 8 minutes, so test sessions are short. Flight time with the IR camera mounted must be re-measured.
+1. **Measure** the TT: Wi-Fi delay, detection time and response to `rc` commands.
+2. **Simulate** a stationary object and a drone with forward speed + turn, starting from random positions, with measured delay, box noise and missed detections.
+3. **Train** PPO with Stable-Baselines3. The reward favors reaching the hover spot quickly and smoothly and penalizes overshoot and getting too close.
+4. **Test** against a tuned PID controller on unseen start positions.
+5. **Fly** supervised, slow, indoors, at fixed altitude.
 
-## Proposed training pipeline
+## Roadmap
 
-MediaPipe remains pretrained. The learned component is the small PPO motion policy; training happens on a workstation, and the ground laptop runs actor inference.
+Weeks 1–2 covered planning and research. Progress is logged on the [progress page](https://jonatl5.github.io/posepilot/log.html).
 
-1. **Measure the real pipeline.** Benchmark frame timing, Wi-Fi stream delay, pose inference time, landmark quality and the TT's response lag to `rc` commands, in good light and low light, with both cameras. Calibrate and align both cameras, choose a desired torso scale, and define the feature order, filtering and normalization.
-2. **Build the simulation.** Use a fast Gymnasium environment to project a simulated torso into camera coordinates and perturb those landmarks with measured noise, delays and missed frames. Keep privileged target coordinates out of the actor's observations. The TT has no official simulator, so the drone model must match its measured response to `rc` commands. Validate the policy in a higher-fidelity simulator such as Gazebo with rendered frames and the actual pose pipeline; first check that the rendered person can be detected.
-3. **Specify episodes and rewards.** Randomize initial bearing, range and target trajectories. Begin with slow, clean pursuit, then add turns, stops, delay, frame loss, body rotation and response lag, and finally low-light noise, IR-only observations and camera switches. For valid observations, a candidate reward is `r = -wx * ex² - ws * es² - wΔ * ||a_t - a_(t-1)||²`. Handle missing observations explicitly, and test separate target-loss and boundary penalties. End on sustained loss or proximity / boundary violations; mark time limits as truncations.
-4. **Train PPO.** Collect fresh parallel rollouts, estimate advantages with the critic, then update the actor using PPO's clipped objective. Record seeds, complete configurations, reward components and checkpoints. A small MLP can be trained on a workstation CPU; profile before assuming GPU acceleration is necessary.
-5. **Evaluate independently.** Select checkpoints on validation scenarios and freeze them before held-out testing. Compare multiple PPO training seeds with tuned PID under matched observations, limits and supervision. Report tracking error in good and low light, retention, smoothness and failures rather than training reward alone.
-6. **Package and transfer.** Ship actor weights, normalization statistics, feature schema and action scaling together. Verify that the deployed actor reproduces the training commands on recorded observations, then progress through simulation, props-off bench tests and supervised fixed-altitude trials. Run the actor deterministically on the ground laptop.
+| Weeks | Stage |
+| --- | --- |
+| 3–4 | Test object detection on the TT camera |
+| 5–6 | Build the simulator and PID baseline |
+| 7–8 | Train PPO and compare with PID |
+| 9–10 | Integrate everything, props off |
+| 11–12 | Fly indoors to real objects |
 
-This is a proposed workflow, not an implemented trainer. Reward coefficients, network size, update interval and randomization ranges remain experimental choices. Record them for every run and freeze final evaluation settings in advance.
+## Research question
 
-## Proposed roadmap and exit gates
+Can a learned policy approach an object better than PID? Measured by final distance / centering error, time to arrive, smoothness (no jerks or overshoot) and success rate.
 
-All stages in this suggested ten-week sequence, weeks 3–12, remain planned. Weeks 1–2 covered project planning and component research. Week-by-week progress is recorded on the [progress page](https://jonatl5.github.io/posepilot/log.html).
+## Safety
 
-1. **Weeks 3–4: perception bench tests and IR camera choice.** Bring up the TT video stream and Pose on the laptop. Measure frame age, Wi-Fi delay, inference time, landmark validity and dropped frames in good and poor light, and bench-test IR camera options.
-2. **Weeks 5–6: simulation and baseline.** Build a pursuit simulation matched to the TT's measured `rc` response, observations and action limits, then tune a PID baseline.
-3. **Weeks 7–8: PPO training.** Randomize visual noise, delay, lighting, target motion and missed observations. Evaluate on held-out seeds.
-4. **Weeks 9–10: full-system integration.** Mount the IR camera, connect the policy to `rc` commands and test timestamps, command limits, stale observations, Wi-Fi loss and manual takeover with propellers removed.
-5. **Weeks 11–12: controlled trials.** Start with slow motion at fixed altitude in a clear indoor area, first in good light and then in dim light. Compare repeated runs and publish logs, configurations and limitations.
+The supervisor runs separately from the policy: speed limits, a minimum distance to the object, hold and slow search turn when the object is lost, and land on Wi-Fi loss or operator command. An operator can always take over. The TT's position hold uses its downward camera, which needs a lit, textured floor.
 
-Compare PPO with tuned PID using center / scale error, capture-to-command latency (median and p95), command smoothness, target retention and recovery time, in both good and low light. Performance and PPO advantages have not yet been established.
+## Earlier designs
 
-## Supervision and safety
-
-The design includes action limits, observation-age checks, target-loss handling and an independent altitude loop. On stale or missing observations the supervisor holds or hands over; on Wi-Fi loss or an operator command the TT lands. Operator takeover and the TT's own link-loss behavior stay independent of the learned policy and must be tested on the aircraft.
-
-Hovering in place relies on the TT's downward vision positioning, which needs a lit, textured floor. Night and low-light flights therefore need their own hold and landing tests. Mounting the IR camera changes mass and balance, so re-check stability and flight time after assembly.
-
-## Future platform
-
-The earlier design, a Holybro X500 V2 with a Raspberry Pi 5 companion computer, Camera Module 3 and Pixhawk 6C running PX4, remains a possible scale-up for running perception and the policy fully onboard.
+- **Person following with day/night cameras.** Replaced by object approach. The IR camera research is kept in [research/ir-cameras.md](research/ir-cameras.md).
+- **Holybro X500 V2 + Raspberry Pi 5 + Pixhawk 6C / PX4.** A possible future platform for running everything onboard.
 
 ## Website preview
 
@@ -104,23 +89,19 @@ Use Node.js 18 or later. No third-party dependencies are required:
 npm start
 ```
 
-Open `http://127.0.0.1:4317/posepilot/`. Run `npm run check` to check the interactive script's syntax.
+Open `http://127.0.0.1:4317/posepilot/`. Run `npm run check` to check the demo script's syntax.
 
-Website files live in `docs/`. GitHub Pages publishes the `/docs` directory from the `main` branch. Pushing changes to these files triggers a Pages update. The weekly progress page is `docs/log.html`; fill in each week's fields and set its status pill as described in the comment at the top of that file.
+Website files live in `docs/`. GitHub Pages publishes `/docs` from `main`, so pushing changes there updates the site. The weekly progress page is `docs/log.html`; fill in each week's fields and set its status pill as described in the comment at the top of that file.
 
-The English-language website includes responsive layouts, keyboard-accessible controls, motion playback / pause and target-occlusion simulation. It uses no analytics, forms or external scripts.
-
-## Primary references
+## References
 
 - [DJI RoboMaster TT](https://www.dji.com/support/product/robomaster-tt)
 - [RoboMaster developer guide](https://robomaster-dev.readthedocs.io/en/latest/)
-- [RoboMaster TT expansion kit](https://store.dji.com/product/robomaster-tt-expansion-kit)
-- [MediaPipe Pose Landmarker for Python](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker/python)
+- [Ultralytics YOLO](https://docs.ultralytics.com/)
+- [MediaPipe Object Detector](https://ai.google.dev/edge/mediapipe/solutions/vision/object_detector)
 - [Gymnasium custom environments](https://gymnasium.farama.org/introduction/create_custom_env/)
 - [Stable-Baselines3 PPO](https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html)
 - [PPO paper](https://arxiv.org/abs/1707.06347)
-- [Gazebo](https://gazebosim.org/docs)
-- [Holybro X500 V2](https://docs.holybro.com/drone-development-kit/px4-development-kit-x500v2) (future platform)
 
 ## License
 

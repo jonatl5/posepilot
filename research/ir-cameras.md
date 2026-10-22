@@ -1,6 +1,8 @@
 # IR camera options for the RoboMaster TT
 
-Comparison for task 1 in [TASKS.md](../TASKS.md). Researched October 2026. Figures marked **(est.)** are not published by the vendor and need checking on a 0.1 g scale or a bench supply before buying.
+> **Shelved (October 2026).** The project switched from following a person to approaching a stationary object, in daylight only, so the IR camera is no longer in the plan. Thermal cameras also can't see most objects, which sit at room temperature. This comparison is kept for reference; the payload and expansion-port limits below still apply to anything mounted on the TT.
+
+Comparison written for the original IR camera task. Researched October 2026. Figures marked **(est.)** are not published by the vendor and need checking on a 0.1 g scale or a bench supply before buying.
 
 ## The limits that decide this
 
