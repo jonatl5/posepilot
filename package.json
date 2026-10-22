@@ -2,7 +2,7 @@
   "name": "posepilot-website",
   "version": "1.0.0",
   "private": true,
-  "description": "Project website for onboard single-person drone tracking research",
+  "description": "Project website for a RoboMaster TT that recognizes an object and flies to it",
   "type": "module",
   "scripts": {
     "start": "node scripts/preview.mjs",

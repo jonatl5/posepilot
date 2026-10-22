@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1435ee">
-  <meta name="description" content="PosePilot: an open research design for single-person drone tracking with MediaPipe Pose and PPO on a DJI RoboMaster TT, with an added infrared camera for low-light and night tracking.">
-  <meta property="og:title" content="PosePilot — Day and Night Visual Pursuit">
-  <meta property="og:description" content="An open research project for single-person drone tracking with MediaPipe Pose, PPO and a DJI RoboMaster TT with visible and infrared cameras.">
+  <meta name="description" content="PosePilot: a DJI RoboMaster TT that recognizes an object, flies up to it and hovers in front of it, steered by a learned PPO policy.">
+  <meta property="og:title" content="PosePilot — Find It, Fly to It">
+  <meta property="og:description" content="An open research project: object recognition and a learned policy fly a DJI RoboMaster TT to a target object.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://jonatl5.github.io/posepilot/">
   <link rel="canonical" href="https://jonatl5.github.io/posepilot/">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=concise-1">
-  <script src="./app.js?v=concise-1" defer></script>
-  <title>PosePilot — Day and Night Visual Pursuit</title>
+  <link rel="stylesheet" href="./styles.css?v=object-1">
+  <script src="./app.js?v=object-1" defer></script>
+  <title>PosePilot — Find It, Fly to It</title>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -33,38 +33,38 @@
   <main id="main">
     <section class="hero section-wrap" id="top">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="small-line"></span> OPEN RESEARCH / VISUAL PURSUIT</div>
-        <h1><span>See the person.</span><br><span class="blue">Learn to follow.</span></h1>
-        <p class="hero-description">A small drone that follows one person, day or night. A camera finds the person; a learned policy steers the drone.</p>
+        <div class="eyebrow"><span class="small-line"></span> OPEN RESEARCH / VISUAL APPROACH</div>
+        <h1><span>Spot the object.</span><br><span class="blue">Fly to it.</span></h1>
+        <p class="hero-description">A small drone that recognizes an object, flies up to it and hovers in front of it. A detector finds the object; a learned policy steers the drone.</p>
         <div class="hero-buttons"><a class="button primary" href="#architecture">How it works</a><a class="button secondary" href="./log.html">See our progress</a></div>
         <div class="project-status"><span class="status-square" aria-hidden="true"></span><span>Design stage · no flight results yet</span></div>
-        <div class="hero-meta"><span>MEDIAPIPE POSE</span><span>ROBOMASTER TT + IR</span><span>PPO</span></div>
+        <div class="hero-meta"><span>OBJECT DETECTION</span><span>ROBOMASTER TT</span><span>PPO</span></div>
       </div>
       <figure class="pose-demo" aria-labelledby="demo-caption">
-        <div class="demo-top"><span><span class="demo-dot" aria-hidden="true"></span><span>POSE / CONCEPT DEMO</span></span><span class="mono">01 PERSON</span></div>
-        <div class="canvas-wrap"><canvas id="pose-canvas" width="700" height="560" role="img" aria-label="Synthetic pose landmark chart showing torso position relative to the center of an image."></canvas><div class="chart-label"><span class="mono">33</span><span>pose landmarks</span></div><div class="axis-note mono">NORMALIZED IMAGE SPACE</div></div>
-        <div class="demo-values"><div><span class="mono">eₓ</span><output id="x-output">+0.12</output><span>horizontal error</span></div><div><span class="mono">s / s*</span><output id="scale-output">1.00×</output><span>relative visual scale</span></div><div><span class="mono">STATE</span><output id="state-output" class="state-value">Valid</output><span>synthetic observation</span></div></div>
-        <div class="demo-controls"><label for="target-x"><span>Target position</span><input id="target-x" type="range" min="-28" max="28" value="12" step="1"></label><label for="target-scale"><span>Visual scale</span><input id="target-scale" type="range" min="70" max="125" value="100" step="1"></label><div class="demo-tools"><button id="animate-demo" type="button">Play motion</button><button id="occlude-demo" type="button" aria-pressed="false">Occlude target</button></div></div>
-        <figcaption id="demo-caption">Synthetic demo: move the sliders to see what the policy sees. No real camera or trained policy.</figcaption>
+        <div class="demo-top"><span><span class="demo-dot" aria-hidden="true"></span><span>DETECTION / CONCEPT DEMO</span></span><span class="mono">01 OBJECT</span></div>
+        <div class="canvas-wrap"><canvas id="pose-canvas" width="700" height="560" role="img" aria-label="Synthetic detection showing an object bounding box relative to the image center and the hover target size."></canvas><div class="chart-label"><span class="mono">1</span><span>detected object</span></div><div class="axis-note mono">NORMALIZED IMAGE SPACE</div></div>
+        <div class="demo-values"><div><span class="mono">eₓ</span><output id="x-output">+0.12</output><span>horizontal error</span></div><div><span class="mono">s / s*</span><output id="scale-output">1.00×</output><span>size vs. hover size</span></div><div><span class="mono">STATE</span><output id="state-output" class="state-value">Valid</output><span>synthetic observation</span></div></div>
+        <div class="demo-controls"><label for="target-x"><span>Object position</span><input id="target-x" type="range" min="-28" max="28" value="12" step="1"></label><label for="target-scale"><span>Apparent size</span><input id="target-scale" type="range" min="70" max="125" value="100" step="1"></label><div class="demo-tools"><button id="animate-demo" type="button">Play approach</button><button id="occlude-demo" type="button" aria-pressed="false">Hide object</button></div></div>
+        <figcaption id="demo-caption">Synthetic demo: move the sliders or play an approach to see what the policy sees. No real camera, detector or trained policy.</figcaption>
       </figure>
     </section>
 
     <section class="scope-strip section-wrap" aria-label="Project scope">
-      <div><span class="scope-number">01</span><div><h2>One person</h2><p>Follow one visible person</p></div></div>
+      <div><span class="scope-number">01</span><div><h2>A few object classes</h2><p>Pretrained detector, e.g. backpack, bottle, chair</p></div></div>
       <div><span class="scope-number">02</span><div><h2>Two actions</h2><p>Move forward + turn</p></div></div>
-      <div><span class="scope-number">03</span><div><h2>Day and night</h2><p>Built-in camera + infrared camera</p></div></div>
+      <div><span class="scope-number">03</span><div><h2>Approach and hover</h2><p>Stop at a set distance, facing the object</p></div></div>
     </section>
 
     <section class="section-wrap content-section" id="architecture">
-      <div class="section-heading"><div><div class="eyebrow">01 / HOW IT WORKS</div><h2>From pixels to motion.</h2></div><p>The drone streams video to a laptop. The laptop finds the person and sends steering commands back over Wi-Fi.</p></div>
+      <div class="section-heading"><div><div class="eyebrow">01 / HOW IT WORKS</div><h2>From pixels to motion.</h2></div><p>The drone streams video to a laptop. The laptop finds the object and sends steering commands back over Wi-Fi.</p></div>
       <div class="architecture-panel">
         <div class="architecture-label"><span class="mono">DJI ROBOMASTER TT + LAPTOP</span><span>Wi-Fi control loop</span></div>
         <div class="pipeline">
-          <div class="pipeline-node"><span class="step-index">01</span><h3>Cameras</h3><p>Visible + infrared</p><span class="node-tag">720p + IR</span></div>
+          <div class="pipeline-node"><span class="step-index">01</span><h3>TT camera</h3><p>Stream frames</p><span class="node-tag">720p30</span></div>
           <span class="connector" aria-hidden="true">→</span>
-          <div class="pipeline-node"><span class="step-index">02</span><h3>MediaPipe Pose</h3><p>Find the person</p><span class="node-tag">33 landmarks</span></div>
+          <div class="pipeline-node"><span class="step-index">02</span><h3>Object detector</h3><p>Find the object</p><span class="node-tag">YOLO · box</span></div>
           <span class="connector" aria-hidden="true">→</span>
-          <div class="pipeline-node"><span class="step-index">03</span><h3>State</h3><p>Position + size</p><span class="node-tag">smoothed</span></div>
+          <div class="pipeline-node"><span class="step-index">03</span><h3>State</h3><p>Box center + size</p><span class="node-tag">smoothed</span></div>
           <span class="connector" aria-hidden="true">→</span>
           <div class="pipeline-node policy"><span class="step-index">04</span><h3>PPO policy</h3><p>Choose commands</p><span class="node-tag">forward, turn</span></div>
         </div>
@@ -73,8 +73,8 @@
     </section>
 
     <section class="state-section" id="method">
-      <div class="section-wrap state-layout"><div class="state-intro"><div class="eyebrow">02 / WHAT THE POLICY SEES</div><h2><span>A few numbers.</span><br><span>Two commands.</span></h2><p>From the person's shoulders and hips we measure where they are in the frame and how big they look. The policy turns that into speed and turn rate.</p></div>
-        <div class="state-code"><div class="code-header"><span>POLICY INPUT</span><span class="mono">sₜ</span></div><dl><div><dt>eₓ, eᵧ</dt><dd>How far off-center the person is</dd></div><div><dt>eₛ</dt><dd>How big they look (distance proxy)</dd></div><div><dt>ė</dt><dd>How fast those are changing</dd></div><div><dt>aₜ₋₁</dt><dd>Last commands sent</dd></div></dl><div class="policy-formula"><span class="mono">sₜ</span><span>→</span><strong>PPO</strong><span>→</span><span class="mono">[forward, turn]</span></div></div>
+      <div class="section-wrap state-layout"><div class="state-intro"><div class="eyebrow">02 / WHAT THE POLICY SEES</div><h2><span>One box.</span><br><span>Two commands.</span></h2><p>From the object's bounding box we measure where it is in the frame and how big it looks. The policy turns and moves forward until the box is centered and at hover size.</p></div>
+        <div class="state-code"><div class="code-header"><span>POLICY INPUT</span><span class="mono">sₜ</span></div><dl><div><dt>eₓ, eᵧ</dt><dd>How far off-center the object is</dd></div><div><dt>eₛ</dt><dd>Box size vs. hover size (distance proxy)</dd></div><div><dt>ė</dt><dd>How fast those are changing</dd></div><div><dt>c</dt><dd>Detection confidence</dd></div><div><dt>aₜ₋₁</dt><dd>Last commands sent</dd></div></dl><div class="policy-formula"><span class="mono">sₜ</span><span>→</span><strong>PPO</strong><span>→</span><span class="mono">[forward, turn]</span></div></div>
       </div>
     </section>
 
@@ -85,7 +85,7 @@
       </div>
       <ol class="training-flow" aria-label="Training stages">
         <li><span class="mono">01</span><strong>Measure</strong><span>Real drone delays</span></li>
-        <li><span class="mono">02</span><strong>Simulate</strong><span>Person + drone</span></li>
+        <li><span class="mono">02</span><strong>Simulate</strong><span>Object + drone</span></li>
         <li><span class="mono">03</span><strong>Train</strong><span>PPO</span></li>
         <li><span class="mono">04</span><strong>Test</strong><span>vs. PID</span></li>
         <li><span class="mono">05</span><strong>Fly</strong><span>Supervised</span></li>
@@ -93,19 +93,19 @@
     </section>
 
     <section class="section-wrap content-section" id="hardware">
-      <div class="section-heading"><div><div class="eyebrow">04 / HARDWARE</div><h2>Small and simple.</h2></div><p>A programmable mini drone, an infrared camera and a laptop.</p></div>
-      <div class="hardware-layout"><div class="hardware-focus"><span class="mono">PLATFORM / 87 g</span><h3>DJI<br>RoboMaster TT</h3><div class="focus-rule"></div><p>Programmable over Wi-Fi, with a port for adding sensors.</p><a href="https://www.dji.com/support/product/robomaster-tt" target="_blank" rel="noopener noreferrer">Platform documentation </a><span class="hardware-note">Not yet flight-tested</span></div><div class="hardware-table-wrap"><table class="hardware-table"><caption class="visually-hidden">Hardware</caption><thead><tr><th>Part</th><th>Job</th></tr></thead><tbody><tr><th>RoboMaster TT<span>~8 min flights</span></th><td>Flies and takes Wi-Fi commands</td></tr><tr><th>Built-in camera<span>720p</span></th><td>Sees the person in good light</td></tr><tr><th>Infrared camera<span>Being chosen</span></th><td>Sees the person in the dark</td></tr><tr><th><strong>Laptop</strong><span>Python</span></th><td>Runs tracking and the policy</td></tr></tbody></table></div></div>
+      <div class="section-heading"><div><div class="eyebrow">04 / HARDWARE</div><h2>Small and simple.</h2></div><p>A programmable mini drone and a laptop.</p></div>
+      <div class="hardware-layout"><div class="hardware-focus"><span class="mono">PLATFORM / 87 g</span><h3>DJI<br>RoboMaster TT</h3><div class="focus-rule"></div><p>Programmable over Wi-Fi, with a port for adding sensors.</p><a href="https://www.dji.com/support/product/robomaster-tt" target="_blank" rel="noopener noreferrer">Platform documentation </a><span class="hardware-note">Not yet flight-tested</span></div><div class="hardware-table-wrap"><table class="hardware-table"><caption class="visually-hidden">Hardware</caption><thead><tr><th>Part</th><th>Job</th></tr></thead><tbody><tr><th>RoboMaster TT<span>~8 min flights</span></th><td>Flies and takes Wi-Fi commands</td></tr><tr><th>Built-in camera<span>720p · 82.6° FOV</span></th><td>Sees the object</td></tr><tr><th><strong>Laptop</strong><span>Python</span></th><td>Runs the detector and the policy</td></tr></tbody></table></div></div>
     </section>
 
-    <section class="section-wrap research-section" id="evaluation"><div class="research-heading"><div class="eyebrow">05 / RESEARCH QUESTION</div><h2>Can a learned policy track better than PID?</h2></div><div class="metrics-grid"><article><span class="metric-icon mono">e</span><h3>Tracking error</h3><p>Keeps the person centered</p></article><article><span class="metric-icon mono">Δt</span><h3>Delay</h3><p>Camera to command</p></article><article><span class="metric-icon mono">∂a</span><h3>Smoothness</h3><p>No jerky commands</p></article><article><span class="metric-icon mono">↻</span><h3>Retention</h3><p>Keeps the person in view</p></article></div></section>
+    <section class="section-wrap research-section" id="evaluation"><div class="research-heading"><div class="eyebrow">05 / RESEARCH QUESTION</div><h2>Can a learned policy approach better than PID?</h2></div><div class="metrics-grid"><article><span class="metric-icon mono">e</span><h3>Final error</h3><p>How close to the hover spot</p></article><article><span class="metric-icon mono">Δt</span><h3>Time to arrive</h3><p>From first detection to hover</p></article><article><span class="metric-icon mono">∂a</span><h3>Smoothness</h3><p>No jerks or overshoot</p></article><article><span class="metric-icon mono">↻</span><h3>Success rate</h3><p>Arrives without losing the object</p></article></div></section>
 
-    <section class="section-wrap content-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow">06 / ROADMAP</div><h2>From the bench to a real flight.</h2></div><p>Weeks 1–2: planning and research. Weeks 3–12 below.</p></div><ol class="timeline"><li><div class="timeline-time">W03–04</div><div class="timeline-body"><h3>Test tracking and pick the IR camera</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W05–06</div><div class="timeline-body"><h3>Build the simulator and PID baseline</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W07–08</div><div class="timeline-body"><h3>Train PPO and compare with PID</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W09–10</div><div class="timeline-body"><h3>Put it all together, props off</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W11–12</div><div class="timeline-body"><h3>Fly indoors, day then dark</h3></div><span class="planned">Planned</span></li></ol></section>
+    <section class="section-wrap content-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow">06 / ROADMAP</div><h2>From the bench to a real flight.</h2></div><p>Weeks 1–2: planning and research. Weeks 3–12 below.</p></div><ol class="timeline"><li><div class="timeline-time">W03–04</div><div class="timeline-body"><h3>Test object detection on the TT camera</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W05–06</div><div class="timeline-body"><h3>Build the simulator and PID baseline</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W07–08</div><div class="timeline-body"><h3>Train PPO and compare with PID</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W09–10</div><div class="timeline-body"><h3>Put it all together, props off</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W11–12</div><div class="timeline-body"><h3>Fly indoors to real objects</h3></div><span class="planned">Planned</span></li></ol></section>
 
-    <section class="supervisor-section"><div class="section-wrap supervisor-layout"><div><div class="eyebrow">SAFETY</div><h2>A policy needs a supervisor.</h2><p>Speed limits and fallbacks run separately from the policy, and an operator can always take over.</p></div><div class="supervisor-flow"><div><span class="mono">TRACK</span><span>Person in view</span></div><span aria-hidden="true">↓</span><div><span class="mono">HOLD</span><span>Person lost</span></div><span aria-hidden="true">↓</span><div><span class="mono">LAND</span><span>Wi-Fi lost or operator</span></div></div></div></section>
+    <section class="supervisor-section"><div class="section-wrap supervisor-layout"><div><div class="eyebrow">SAFETY</div><h2>A policy needs a supervisor.</h2><p>Speed limits, a minimum distance and fallbacks run separately from the policy, and an operator can always take over.</p></div><div class="supervisor-flow"><div><span class="mono">APPROACH</span><span>Object detected</span></div><span aria-hidden="true">↓</span><div><span class="mono">HOLD / SEARCH</span><span>Object lost: stop, turn slowly</span></div><span aria-hidden="true">↓</span><div><span class="mono">LAND</span><span>Wi-Fi lost or operator</span></div></div></div></section>
 
-    <section class="section-wrap references-section" id="references"><div><div class="eyebrow">07 / REFERENCES</div><h2>Built on open tools.</h2></div><div class="reference-list"><a href="https://www.dji.com/support/product/robomaster-tt" target="_blank" rel="noopener noreferrer"><span>01</span>DJI RoboMaster TT<span></span></a><a href="https://robomaster-dev.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer"><span>02</span>RoboMaster developer guide<span></span></a><a href="https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker/python" target="_blank" rel="noopener noreferrer"><span>03</span>MediaPipe Pose Landmarker<span></span></a><a href="https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html" target="_blank" rel="noopener noreferrer"><span>04</span>Stable-Baselines3 PPO<span></span></a></div></section>
+    <section class="section-wrap references-section" id="references"><div><div class="eyebrow">07 / REFERENCES</div><h2>Built on open tools.</h2></div><div class="reference-list"><a href="https://www.dji.com/support/product/robomaster-tt" target="_blank" rel="noopener noreferrer"><span>01</span>DJI RoboMaster TT<span></span></a><a href="https://robomaster-dev.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer"><span>02</span>RoboMaster developer guide<span></span></a><a href="https://docs.ultralytics.com/" target="_blank" rel="noopener noreferrer"><span>03</span>Ultralytics YOLO<span></span></a><a href="https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html" target="_blank" rel="noopener noreferrer"><span>04</span>Stable-Baselines3 PPO<span></span></a></div></section>
   </main>
-  <footer class="footer section-wrap"><div><a class="footer-brand" href="#top">PosePilot</a><span>Open research in day-and-night visual pursuit.</span></div><div><a href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">Repository </a><span>© 2026 jonatl5 · MIT</span></div></footer>
+  <footer class="footer section-wrap"><div><a class="footer-brand" href="#top">PosePilot</a><span>Open research in visual object approach.</span></div><div><a href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">Repository </a><span>© 2026 jonatl5 · MIT</span></div></footer>
   <noscript><p class="noscript-note">JavaScript enables the interactive demo. The project introduction remains available without it.</p></noscript>
 </body>
 </html>
