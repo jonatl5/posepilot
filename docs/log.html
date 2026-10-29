@@ -1,61 +1,27 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1435ee">
-  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=object-1">
-  <title>PosePilot — Progress</title>
-  <style>
-    .log-entry .timeline-body dl{display:grid;grid-template-columns:110px 1fr;gap:8px 18px;margin:16px 0 0;font-size:.9rem;line-height:1.8}
-    .log-entry dt{font-family:var(--mono);color:#53637d}
-    .log-entry dd{margin:0;color:var(--ink)}
-    .log-entry dd:empty::before{content:"—";color:#a0a8b6}
-    .nav a[aria-current=page]{color:var(--blue)}
-    .planned.done{color:#2d6a12;border-color:#b7e08a;background:#f1fbe6}
-    .planned.active{color:var(--blue);border-color:#c5d0fb;background:#f2f5ff}
-    @media(max-width:600px){.log-entry .timeline-body dl{grid-template-columns:1fr;gap:2px}.log-entry dd{margin-bottom:8px}}
-  </style>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#1435ee">
+  <meta name="description" content="objectPilot progress: the move to printed-object approach, rapid prototypes, initial simulation results and the next hardware validation steps.">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css?v=prototype-2">
+  <title>objectPilot — Progress</title>
 </head>
 <body>
-  <!--
-    Weekly progress log, linked as "Progress" in the main site's navigation.
-    To fill in a week: edit its <dd> fields below. Empty fields show a dash.
-    Status pill: class="planned" (Not started), "planned active" (In progress), "planned done" (Done).
-  -->
-  <header class="header">
-    <div class="header-inner">
-      <a class="brand" href="./" aria-label="PosePilot home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>PosePilot<span class="brand-tag">RESEARCH</span></a>
-      <nav class="nav" aria-label="Main navigation">
-        <a href="./#architecture">Architecture</a>
-        <a href="./#training">Training</a>
-        <a href="./#hardware">Hardware</a>
-        <a href="./#roadmap">Roadmap</a>
-        <a href="./log.html" aria-current="page">Progress</a>
-      </nav>
-      <div class="header-actions"><a class="repo-link" href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true"></span></a></div>
-    </div>
-  </header>
-  <main id="main">
-    <section class="section-wrap content-section">
-      <div class="section-heading"><div><div class="eyebrow">PROGRESS / WEEKLY LOG</div><h2>What we did, week by week.</h2></div><p>Weekly progress notes. Each week lists the plan, what got done, what got in the way and what comes next.</p></div>
-      <ol class="timeline">
-        <li class="log-entry"><div class="timeline-time">W01</div><div class="timeline-body"><h3>Initial project plan</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd>Decide what the project is and how we will approach it.</dd><dt>Done</dt><dd>Agreed on the initial project plan: a drone that follows one person using MediaPipe Pose, with a PPO policy turning pose into motion.</dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd>Research the components the project needs.</dd></dl></div><span class="planned done">Done</span></li>
-        <li class="log-entry"><div class="timeline-time">W02</div><div class="timeline-body"><h3>Researching components</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd>Work out exactly what the project needs, including hardware and components.</dd><dt>Done</dt><dd>Researched the platform, cameras and other components.</dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned done">Done</span></li>
-        <li class="log-entry"><div class="timeline-time">W03</div><div class="timeline-body"><h3>Week 3</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W04</div><div class="timeline-body"><h3>Week 4</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W05</div><div class="timeline-body"><h3>Week 5</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W06</div><div class="timeline-body"><h3>Week 6</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W07</div><div class="timeline-body"><h3>Week 7</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W08</div><div class="timeline-body"><h3>Week 8</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W09</div><div class="timeline-body"><h3>Week 9</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W10</div><div class="timeline-body"><h3>Week 10</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W11</div><div class="timeline-body"><h3>Week 11</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-        <li class="log-entry"><div class="timeline-time">W12</div><div class="timeline-body"><h3>Week 12</h3><dl><dt>Dates</dt><dd></dd><dt>Plan</dt><dd></dd><dt>Done</dt><dd></dd><dt>Problems</dt><dd></dd><dt>Next</dt><dd></dd></dl></div><span class="planned">Not started</span></li>
-      </ol>
-    </section>
-  </main>
-  <footer class="footer section-wrap"><div><a class="footer-brand" href="./">PosePilot</a><span>Weekly progress log.</span></div><div><a href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">Repository </a><span>© 2026 jonatl5 · MIT</span></div></footer>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="header"><div class="header-inner"><a class="brand" href="./" aria-label="objectPilot home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>objectPilot<span class="brand-tag">RESEARCH</span></a><nav class="nav" aria-label="Main navigation"><a href="./#prototypes">Rapid prototypes</a><a href="./#architecture">System</a><a href="./#results">Results</a><a href="./#roadmap">Roadmap</a><a href="./log.html" aria-current="page">Progress</a></nav><div class="header-actions"><a class="repo-link" href="https://github.com/jonatl5/posepilot">GitHub ↗</a></div></div></header>
+  <main id="main"><section class="section-wrap content-section progress-section">
+    <div class="eyebrow">PROGRESS / UPDATED OCTOBER 29, 2026</div><h1>From a plan<br>to a runnable prototype.</h1><p class="progress-intro">The project is now objectPilot: stationary object recognition and measured approach on RoboMaster TT. Our first target is a printed object image on a wall. The earlier person-following direction is retained here as history.</p>
+    <ol class="timeline progress-timeline">
+      <li><div class="timeline-time">EARLY PLANNING</div><div class="timeline-body"><h2>Initial concept and platform research</h2><p>The original idea used MediaPipe Pose for person following. Component research led to a RoboMaster TT with laptop processing over Wi-Fi. The onboard-compute and night-vision directions were set aside.</p><p class="small-note">Historical direction; it is not the current implementation.</p></div><span class="planned done">Recorded</span></li>
+      <li><div class="timeline-time">OCT 15–22</div><div class="timeline-body"><h2>Move from people to objects</h2><p>The October 15 plan established the course dates and expected November 4 arrival. The October 22 PRD moved the goal to detecting a stationary object, approaching it and comparing PPO with PID.</p><p>The current scope removes human identity, person following, night operation and policy-controlled altitude.</p></div><span class="planned done">Complete</span></li>
+      <li><div class="timeline-time">OCT 29</div><div class="timeline-body"><h2>Rapid prototypes</h2><dl class="progress-details"><dt>Built</dt><dd>A Python package with YOLO inference, video/webcam dry runs, target confirmation, a shared 64-value observation, PID/PPO interfaces and an independent supervisor.</dd><dt>Executed</dt><dd>15 automated tests passed. A ten-sample blank-video run returned zero motion throughout. PPO training, saving, loading and evaluation completed.</dd><dt>Measured</dt><dd>On the same 30 simulated starts, initial PID completed 30 approaches; PPO after 100,352 transitions completed 14. Both recorded zero minimum-distance violations. These are development diagnostics, not flight results.</dd><dt>Prepared</dt><dd>Video extraction and grouped data splits, a printed-target collection procedure, and an ESP32 firmware extension exposing range validity and age.</dd><dt>Limits</dt><dd>No real printed-target accuracy measurements, TT flight tests, firmware compilation or flashing. The external ToF adapter is not enabled.</dd><dt>Decision</dt><dd>Keep PID as the baseline. Use matte wall prints for the first demonstration and verify the included forward ToF before adding a sensor.</dd></dl><div class="progress-links"><a class="text-link" href="./#simulation">Replay the simulator ↗</a><a class="text-link" href="./#results">Inspect all results ↗</a></div></div><span class="planned done">Complete</span></li>
+      <li><div class="timeline-time">OCT 30–NOV 3</div><div class="timeline-body"><h2>Collect data and present the prototype</h2><p>Select the printed classes, record phone footage, label representative frames and benchmark the pretrained detector. Tune PID on validation scenarios and train multiple PPO seeds. Present the current prototype and its limits on November 3.</p></div><span class="planned">Next</span></li>
+      <li><div class="timeline-time">NOV 4–7</div><div class="timeline-body"><h2>Expected arrival and hardware qualification</h2><p>Record delivered firmware versions, verify forward ToF against a tape, calibrate camera/sensor geometry and measure control response. Compile and test the prepared ESP32 extension. Flight dispatch, takeover, watchdog and link-loss behavior must pass hardware checks.</p><p class="small-note">Arrival is approximate. If it slips, preserve the calibration sequence and reduce optional features.</p></div><span class="planned">Planned</span></li>
+      <li><div class="timeline-time">NOV 8–DEC 3</div><div class="timeline-body"><h2>Integrate, compare and freeze</h2><p>First validate a supervised PID approach to wall prints, then compare calibrated PPO candidates using matched conditions. Peer Review 1 is due November 10 at noon Pacific. Freeze features on December 3 and choose the most reliable validated demo controller.</p></div><span class="planned">Planned</span></li>
+      <li><div class="timeline-time">DEC 4–15</div><div class="timeline-body"><h2>Rehearsal and final delivery</h2><p>Rehearse December 4–9. Final presentation and demonstration: December 10. Final report and Peer Review 2: December 15 at noon Pacific.</p></div><span class="planned">Planned</span></li>
+    </ol>
+    <div class="hero-buttons"><a class="button primary" href="./#prototypes">Explore Rapid prototypes</a><a class="button secondary" href="https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit">Read the revised PRD ↗</a></div>
+  </section></main>
+  <footer class="footer section-wrap"><div><a class="footer-brand" href="./">objectPilot</a><span>Progress grounded in recorded work.</span></div><div><a href="https://github.com/jonatl5/posepilot">Repository ↗</a><span>© 2026 jonatl5 · MIT</span></div></footer>
 </body>
 </html>

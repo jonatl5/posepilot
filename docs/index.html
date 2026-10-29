@@ -4,108 +4,124 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1435ee">
-  <meta name="description" content="PosePilot: a DJI RoboMaster TT that recognizes an object, flies up to it and hovers in front of it, steered by a learned PPO policy.">
-  <meta property="og:title" content="PosePilot — Find It, Fly to It">
-  <meta property="og:description" content="An open research project: object recognition and a learned policy fly a DJI RoboMaster TT to a target object.">
+  <meta name="description" content="objectPilot: object detection, forward ToF sensing and learned control on RoboMaster TT. Explore our rapid prototypes, recorded simulation and current results.">
+  <meta property="og:title" content="objectPilot — Rapid prototypes">
+  <meta property="og:description" content="From a printed target to a measured stand-off. Explore the perception pipeline, PID/PPO simulation and ESP32 sensor prototype.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://jonatl5.github.io/posepilot/">
   <link rel="canonical" href="https://jonatl5.github.io/posepilot/">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=object-1">
-  <script src="./app.js?v=object-1" defer></script>
-  <title>PosePilot — Find It, Fly to It</title>
+  <link rel="stylesheet" href="./styles.css?v=prototype-2">
+  <script src="./app.js?v=prototype-2" defer></script>
+  <title>objectPilot — Rapid prototypes</title>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="header">
-    <div class="header-inner">
-      <a class="brand" href="#top" aria-label="PosePilot home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>PosePilot<span class="brand-tag">RESEARCH</span></a>
-      <nav class="nav" aria-label="Main navigation">
-        <a href="#architecture">Architecture</a>
-        <a href="#training">Training</a>
-        <a href="#hardware">Hardware</a>
-        <a href="#roadmap">Roadmap</a>
-        <a href="./log.html">Progress</a>
-      </nav>
-      <div class="header-actions"><a class="repo-link" href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true"></span></a></div>
-    </div>
-  </header>
+  <header class="header"><div class="header-inner">
+    <a class="brand" href="#top" aria-label="objectPilot home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>objectPilot<span class="brand-tag">RESEARCH</span></a>
+    <nav class="nav" aria-label="Main navigation"><a href="#prototypes">Rapid prototypes</a><a href="#architecture">System</a><a href="#results">Results</a><a href="#roadmap">Roadmap</a><a href="./log.html">Progress</a></nav>
+    <div class="header-actions"><a class="repo-link" href="https://github.com/jonatl5/posepilot">GitHub ↗</a></div>
+  </div></header>
   <main id="main">
     <section class="hero section-wrap" id="top">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="small-line"></span> OPEN RESEARCH / VISUAL APPROACH</div>
-        <h1><span>Spot the object.</span><br><span class="blue">Fly to it.</span></h1>
-        <p class="hero-description">A small drone that recognizes an object, flies up to it and hovers in front of it. A detector finds the object; a learned policy steers the drone.</p>
-        <div class="hero-buttons"><a class="button primary" href="#architecture">How it works</a><a class="button secondary" href="./log.html">See our progress</a></div>
-        <div class="project-status"><span class="status-square" aria-hidden="true"></span><span>Design stage · no flight results yet</span></div>
-        <div class="hero-meta"><span>OBJECT DETECTION</span><span>ROBOMASTER TT</span><span>PPO</span></div>
+        <div class="eyebrow"><span class="small-line"></span> CAPSTONE / ROBOMASTER TT</div>
+        <h1>Recognize.<br>Approach.<br><span class="blue">Keep a distance.</span></h1>
+        <p class="hero-description">A printed object on a wall. A drone that centers it and approaches a measured stand-off. We combine object detection, forward infrared ToF and a PID or learned PPO controller.</p>
+        <div class="hero-buttons"><a class="button primary" href="#prototypes">Explore the prototypes ↓</a><a class="button secondary" href="https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit">Read the PRD ↗</a></div>
+        <div class="project-status"><span class="status-square" aria-hidden="true"></span><span>Pre-hardware prototype · updated October 29, 2026<br>Software tested locally. Flight validation comes next.</span></div>
+        <div class="hero-meta"><span>YOLO11n</span><span>FORWARD ToF</span><span>PID + PPO</span></div>
       </div>
       <figure class="pose-demo" aria-labelledby="demo-caption">
-        <div class="demo-top"><span><span class="demo-dot" aria-hidden="true"></span><span>DETECTION / CONCEPT DEMO</span></span><span class="mono">01 OBJECT</span></div>
-        <div class="canvas-wrap"><canvas id="pose-canvas" width="700" height="560" role="img" aria-label="Synthetic detection showing an object bounding box relative to the image center and the hover target size."></canvas><div class="chart-label"><span class="mono">1</span><span>detected object</span></div><div class="axis-note mono">NORMALIZED IMAGE SPACE</div></div>
-        <div class="demo-values"><div><span class="mono">eₓ</span><output id="x-output">+0.12</output><span>horizontal error</span></div><div><span class="mono">s / s*</span><output id="scale-output">1.00×</output><span>size vs. hover size</span></div><div><span class="mono">STATE</span><output id="state-output" class="state-value">Valid</output><span>synthetic observation</span></div></div>
-        <div class="demo-controls"><label for="target-x"><span>Object position</span><input id="target-x" type="range" min="-28" max="28" value="12" step="1"></label><label for="target-scale"><span>Apparent size</span><input id="target-scale" type="range" min="70" max="125" value="100" step="1"></label><div class="demo-tools"><button id="animate-demo" type="button">Play approach</button><button id="occlude-demo" type="button" aria-pressed="false">Hide object</button></div></div>
-        <figcaption id="demo-caption">Synthetic demo: move the sliders or play an approach to see what the policy sees. No real camera, detector or trained policy.</figcaption>
+        <div class="demo-top"><span><span class="demo-dot" aria-hidden="true"></span>SUPERVISOR EXPLORER</span><span class="mono">ILLUSTRATION</span></div>
+        <div class="canvas-wrap"><canvas id="object-canvas" width="700" height="500" role="img" aria-label="Illustration of a printed target and its detection box. Adjust target position, wall distance and sensor validity to explore stop conditions."></canvas></div>
+        <div class="demo-values"><div><span class="mono">eₓ</span><output id="x-output">+0.12</output><span>centering error</span></div><div><span class="mono">FORWARD ToF</span><output id="range-output">0.90 m</output><span>illustrative reading</span></div><div><span class="mono">COMMAND</span><output id="state-output" class="state-value">Center</output><span>supervisor decision</span></div></div>
+        <div class="demo-controls">
+          <label for="target-x">Target position<input id="target-x" type="range" min="-28" max="28" value="12" step="1"></label>
+          <label for="wall-distance">Wall distance<input id="wall-distance" type="range" min="25" max="180" value="90" step="1"></label>
+          <div class="demo-tools"><button id="sensor-toggle" type="button" aria-pressed="false">Invalidate ToF</button><button id="occlude-demo" type="button" aria-pressed="false">Hide target</button><button id="reset-demo" type="button">Reset</button></div>
+        </div>
+        <figcaption id="demo-caption">An interactive explanation of the stop rules, not camera inference or a running PPO policy. The 0.65 m stand-off and 0.40 m minimum are provisional simulation settings.</figcaption>
       </figure>
     </section>
 
-    <section class="scope-strip section-wrap" aria-label="Project scope">
-      <div><span class="scope-number">01</span><div><h2>A few object classes</h2><p>Pretrained detector, e.g. backpack, bottle, chair</p></div></div>
-      <div><span class="scope-number">02</span><div><h2>Two actions</h2><p>Move forward + turn</p></div></div>
-      <div><span class="scope-number">03</span><div><h2>Approach and hover</h2><p>Stop at a set distance, facing the object</p></div></div>
+    <section class="scope-strip section-wrap" aria-label="Current project scope">
+      <div><span class="scope-number">01</span><div><h2>Printed targets first</h2><p>Stationary images on a wall, in indoor light</p></div></div>
+      <div><span class="scope-number">02</span><div><h2>Two control outputs</h2><p>Forward and yaw; onboard altitude stabilization</p></div></div>
+      <div><span class="scope-number">03</span><div><h2>Measured stand-off</h2><p>Forward ToF for near-wall distance</p></div></div>
     </section>
+
+    <section class="section-wrap content-section" id="prototypes">
+      <div class="section-heading"><div><div class="eyebrow">01 / OCTOBER 29 DELIVERABLE</div><h2>Rapid prototypes</h2></div><p>Three prototype components, with evidence of what runs now and a clear next test for each.</p></div>
+      <div class="prototype-grid">
+        <article class="prototype-card"><div class="prototype-top"><span class="mono">P01 / PERCEPTION</span><span class="evidence-tag">Local software</span></div><h3>Pixels to bounded commands</h3><p>YOLO detections feed target confirmation, a shared state builder, a controller and an independent supervisor. The video and webcam launchers produce dry-run commands and JSONL logs.</p><div class="prototype-proof"><strong>15 automated tests pass</strong><span>Across state, control, data and sensor parsing. Ten blank-video samples all produced zero motion.</span></div><p class="next-test"><strong>Next:</strong> record real wall prints, label them and measure detection quality. Blank-video inference is only an integration check.</p><a class="text-link" href="https://drive.google.com/file/d/1CWB-8wcXvh0cUm5BgMetaEBFtSmdq6WW/view">Get the runnable starter ↗</a></article>
+        <article class="prototype-card"><div class="prototype-top"><span class="mono">P02 / CONTROL</span><span class="evidence-tag">Simulation</span></div><h3>A closed-loop approach</h3><p>A Gymnasium environment responds to forward and yaw actions, with randomized lag, detection noise and dropout. PID and PPO use the same observation format and supervisor.</p><div class="prototype-proof"><strong>100,352 PPO transitions</strong><span>One initial training seed, checkpoint save/load and deterministic evaluation completed.</span></div><p class="next-test"><strong>Next:</strong> tune the baseline, train multiple PPO seeds and calibrate the model from the actual TT.</p><a class="text-link" href="#simulation">Replay a recorded rollout ↓</a></article>
+        <article class="prototype-card"><div class="prototype-top"><span class="mono">P03 / SENSING</span><span class="evidence-tag pending">Prepared</span></div><h3>Know when range is fresh</h3><p>An extension to the official ESP32 example adds a sample sequence, validity and age. Invalid or cached readings must not look like new measurements.</p><div class="prototype-proof"><strong>Firmware extension generated</strong><span>Pinned RMTT source inspected. Custom reply parser tested locally; optional VL53L1X adapter prepared.</span></div><p class="next-test"><strong>Next:</strong> compile for the delivered board, verify query routing and compare forward ToF with a tape measure. No firmware has been flashed.</p><a class="text-link" href="https://github.com/RoboMaster/RMTT_Libs">Official firmware source ↗</a></article>
+      </div>
+
+      <div class="rollout-panel" id="simulation">
+        <div class="rollout-heading"><div><div class="eyebrow">RECORDED PYTHON SIMULATOR OUTPUT</div><h3>Same start. Two controllers.</h3></div><p>Seed 10000, the first diagnostic scenario. Switch controllers or scrub through their recorded trajectories.</p></div>
+        <div class="rollout-layout">
+          <figure class="rollout-figure"><canvas id="rollout-canvas" width="800" height="440" role="img" aria-label="Top-down replay of a drone approaching a printed target on a wall, with desired stand-off and minimum clearance marked."></canvas><div class="rollout-legend"><span>Stand-off: 0.65 m</span><span>Minimum: 0.40 m</span></div><figcaption>A simulated trajectory recorded from the Python environment. This is not flight footage and the browser does not run PPO.</figcaption></figure>
+          <div class="rollout-controls">
+            <label for="controller-select">Controller<select id="controller-select"><option value="pid">PID starting gains</option><option value="ppo">PPO · 100,352 steps</option></select></label>
+            <dl class="rollout-readings"><div><dt>Elapsed</dt><dd id="rollout-time">—</dd></div><div><dt>Wall clearance</dt><dd id="rollout-distance">—</dd></div><div><dt>Forward / yaw</dt><dd id="rollout-action">—</dd></div><div><dt>Episode outcome</dt><dd id="rollout-outcome">—</dd></div></dl>
+            <label for="rollout-position">Replay position<input id="rollout-position" type="range" min="0" max="1" value="0" step="1" disabled></label>
+            <button id="rollout-play" type="button" class="button primary" aria-pressed="false" disabled>Play rollout</button>
+            <p id="rollout-status" class="small-note" role="status">Loading recorded trajectory…</p>
+            <a class="text-link" href="./evidence/trajectory.json" download>Download this trace ↓</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="results-section" id="results"><div class="section-wrap">
+      <div class="section-heading"><div><div class="eyebrow">02 / INITIAL EVIDENCE</div><h2>A baseline to improve on.</h2></div><p>Thirty matched diagnostic episodes, seeds 10000–10029, with synthetic observations and a common supervisor. All numbers below are simulation results.</p></div>
+      <div class="result-bars" aria-label="Successes out of 30 simulation episodes">
+        <div><div class="bar-label"><strong>PID starting gains</strong><span>30 / 30</span></div><div class="bar-track"><span style="width:100%"></span></div></div>
+        <div><div class="bar-label"><strong>PPO · 100,352 steps</strong><span>14 / 30</span></div><div class="bar-track"><span style="width:46.6667%"></span></div></div>
+        <div><div class="bar-label"><strong>PPO · 8,192 steps</strong><span>0 / 30</span></div><div class="bar-track"><span style="width:0%"></span></div></div>
+      </div>
+      <div class="results-table-wrap" role="region" aria-label="Simulation results table; scroll horizontally on small screens" tabindex="0"><table class="results-table"><caption>Initial simulation comparison · October 29, 2026</caption><thead><tr><th scope="col">Controller</th><th scope="col">Success rate</th><th scope="col">95% Wilson interval</th><th scope="col">Minimum-distance violations</th><th scope="col">Episode data</th></tr></thead><tbody>
+        <tr><th scope="row">PID starting gains</th><td>100%</td><td>88.6–100%</td><td>0</td><td><a href="./evidence/pid-episodes.csv" download>CSV ↓</a></td></tr>
+        <tr><th scope="row">PPO · 100,352 steps</th><td>46.7%</td><td>30.2–63.9%</td><td>0</td><td><a href="./evidence/ppo-episodes.csv" download>CSV ↓</a></td></tr>
+        <tr><th scope="row">PPO · 8,192 steps</th><td>0%</td><td>0–11.4%</td><td>0</td><td><a href="./evidence/ppo_smoke-episodes.csv" download>CSV ↓</a></td></tr>
+      </tbody></table></div>
+      <p class="evidence-note">PID remains the baseline. These short, single-seed PPO runs do not establish a final comparison. The diagnostic scenarios are now development data; final evaluation needs new held-out seeds, tuned controllers and hardware trials. Zero simulated distance violations is not evidence of real-flight safety.</p>
+    </div></section>
 
     <section class="section-wrap content-section" id="architecture">
-      <div class="section-heading"><div><div class="eyebrow">01 / HOW IT WORKS</div><h2>From pixels to motion.</h2></div><p>The drone streams video to a laptop. The laptop finds the object and sends steering commands back over Wi-Fi.</p></div>
-      <div class="architecture-panel">
-        <div class="architecture-label"><span class="mono">DJI ROBOMASTER TT + LAPTOP</span><span>Wi-Fi control loop</span></div>
-        <div class="pipeline">
-          <div class="pipeline-node"><span class="step-index">01</span><h3>TT camera</h3><p>Stream frames</p><span class="node-tag">720p30</span></div>
-          <span class="connector" aria-hidden="true">→</span>
-          <div class="pipeline-node"><span class="step-index">02</span><h3>Object detector</h3><p>Find the object</p><span class="node-tag">YOLO · box</span></div>
-          <span class="connector" aria-hidden="true">→</span>
-          <div class="pipeline-node"><span class="step-index">03</span><h3>State</h3><p>Box center + size</p><span class="node-tag">smoothed</span></div>
-          <span class="connector" aria-hidden="true">→</span>
-          <div class="pipeline-node policy"><span class="step-index">04</span><h3>PPO policy</h3><p>Choose commands</p><span class="node-tag">forward, turn</span></div>
-        </div>
-        <div class="architecture-bottom"><div class="compute-bracket"><span class="mono">LAPTOP</span><span>Runs steps 02–04</span></div><div class="flight-link"><span class="mono">Wi-Fi</span><span aria-hidden="true">→</span><strong>RoboMaster TT</strong></div></div>
+      <div class="section-heading"><div><div class="eyebrow">03 / SYSTEM</div><h2>Vision finds it.<br>ToF measures the approach.</h2></div><p>The laptop handles perception and control. The TT handles flight stabilization. Its expansion ESP32 provides the forward range needed near the wall.</p></div>
+      <div class="architecture-panel"><div class="architecture-label"><span class="mono">CAMERA + FORWARD RANGE → LAPTOP</span><span>Target: 10 Hz control cycle</span></div>
+        <div class="pipeline"><div class="pipeline-node"><span class="step-index">01</span><h3>Detect</h3><p>YOLO11n + target confirmation</p><span class="node-tag">box · confidence</span></div><span class="connector" aria-hidden="true">→</span><div class="pipeline-node"><span class="step-index">02</span><h3>Build state</h3><p>Vision, range and freshness</p><span class="node-tag">16 features × 4</span></div><span class="connector" aria-hidden="true">→</span><div class="pipeline-node policy"><span class="step-index">03</span><h3>PID or PPO</h3><p>Propose two actions</p><span class="node-tag">forward · yaw</span></div><span class="connector" aria-hidden="true">→</span><div class="pipeline-node"><span class="step-index">04</span><h3>Supervise</h3><p>Reject stale or unsafe inputs</p><span class="node-tag">bounded RC</span></div></div>
+        <div class="telemetry-note"><span class="mono">CURRENT OUTPUT</span><span>Dry-run command log. Live dispatch, takeover and link-loss behavior are hardware integration gates.</span></div>
       </div>
+      <div class="architecture-details"><article><span class="detail-index">A</span><h3>64 policy inputs, two outputs</h3><p>Box position and scale, visual distance, forward ToF, validity, association, confidence, data ages, rates and previous actions form 16 features. Four ticks provide history. The policy outputs forward and yaw; SDK RC values are control channels, not meters per second.</p></article><article><span class="detail-index">B</span><h3>A sensor that earns our trust</h3><p>The kit includes forward ToF, specified up to 1.2 m indoors against a white wall. It is distinct from the aircraft’s downward ToF. We will test the built-in sensor before enabling an external VL53L1X. On wall prints, it measures the wall.</p><a href="https://dl.djicdn.com/downloads/RoboMaster%20TT/RoboMaster_TT_Tello_Talent_User_Manual_en.pdf">DJI platform manual ↗</a></article></div>
     </section>
 
-    <section class="state-section" id="method">
-      <div class="section-wrap state-layout"><div class="state-intro"><div class="eyebrow">02 / WHAT THE POLICY SEES</div><h2><span>One box.</span><br><span>Two commands.</span></h2><p>From the object's bounding box we measure where it is in the frame and how big it looks. The policy turns and moves forward until the box is centered and at hover size.</p></div>
-        <div class="state-code"><div class="code-header"><span>POLICY INPUT</span><span class="mono">sₜ</span></div><dl><div><dt>eₓ, eᵧ</dt><dd>How far off-center the object is</dd></div><div><dt>eₛ</dt><dd>Box size vs. hover size (distance proxy)</dd></div><div><dt>ė</dt><dd>How fast those are changing</dd></div><div><dt>c</dt><dd>Detection confidence</dd></div><div><dt>aₜ₋₁</dt><dd>Last commands sent</dd></div></dl><div class="policy-formula"><span class="mono">sₜ</span><span>→</span><strong>PPO</strong><span>→</span><span class="mono">[forward, turn]</span></div></div>
-      </div>
-    </section>
+    <section class="state-section" id="data"><div class="section-wrap data-layout"><div class="state-intro"><div class="eyebrow">04 / BEFORE THE DRONE ARRIVES</div><h2>Collect videos.<br>Train the right component.</h2><p>Phone videos are for detection and observation-noise measurements. PPO needs an interactive environment whose next state changes with its actions.</p></div><ol class="capture-list"><li><strong>Print and mark</strong><span>Start with 2–3 object classes on matte A3 prints. Mark camera-to-wall distances from 0.4 to 3 m.</span></li><li><strong>Capture the difficult moments</strong><span>Record approach, yaw, pauses, occlusions, partial crops and empty walls. Keep the camera at a repeatable height.</span></li><li><strong>Label and split by session</strong><span>Sample 1–2 frames/sec, review the object boxes and keep each video/print group in one split.</span></li><li><strong>Adapt after delivery</strong><span>Collect TT footage, recalibrate each print and measure latency, range validity and command response.</span></li></ol></div></section>
 
-    <section class="section-wrap content-section training-section" id="training">
-      <div class="section-heading">
-        <div><div class="eyebrow">03 / TRAINING</div><h2>Train in simulation.<br>Then fly.</h2></div>
-        <p>The policy learns in a simulator first. We compare it against a simple PID controller before any real flight.</p>
-      </div>
-      <ol class="training-flow" aria-label="Training stages">
-        <li><span class="mono">01</span><strong>Measure</strong><span>Real drone delays</span></li>
-        <li><span class="mono">02</span><strong>Simulate</strong><span>Object + drone</span></li>
-        <li><span class="mono">03</span><strong>Train</strong><span>PPO</span></li>
-        <li><span class="mono">04</span><strong>Test</strong><span>vs. PID</span></li>
-        <li><span class="mono">05</span><strong>Fly</strong><span>Supervised</span></li>
-      </ol>
-    </section>
+    <section class="section-wrap content-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow">05 / COURSE MILESTONES</div><h2>From the prototype to the demo.</h2></div><p>Dates follow the course plan. Expected drone arrival is approximately November 4; calibration comes before autonomous trials.</p></div><ol class="timeline">
+      <li><div class="timeline-time">OCT 29</div><div class="timeline-body"><h3>Rapid prototypes</h3><p>Dry-run pipeline, initial PID/PPO comparison, data tools and ESP32 extension preparation.</p></div><span class="planned done">Complete</span></li>
+      <li><div class="timeline-time">OCT 30–NOV 3</div><div class="timeline-body"><h3>Collect prints and present progress</h3><p>Record phone footage, benchmark the detector and show the simulation at the November 3 status presentation.</p></div><span class="planned">Next</span></li>
+      <li><div class="timeline-time">NOV 4–7</div><div class="timeline-body"><h3>Bring up the TT and measure</h3><p>Verify forward range, compile firmware, calibrate the camera and measure delay, braking and command response.</p></div><span class="planned">Planned</span></li>
+      <li><div class="timeline-time">NOV 8–19</div><div class="timeline-body"><h3>Validate the PID approach</h3><p>Supervised printed-wall trials and TT-specific data. Peer Review 1: November 10, noon Pacific.</p></div><span class="planned">Planned</span></li>
+      <li><div class="timeline-time">NOV 20–DEC 3</div><div class="timeline-body"><h3>Compare calibrated controllers</h3><p>Multiple PPO seeds, matched trials and measured failures. Freeze features on December 3.</p></div><span class="planned">Planned</span></li>
+      <li><div class="timeline-time">DEC 4–15</div><div class="timeline-body"><h3>Rehearse, demonstrate, report</h3><p>Final demo December 10. Final report and Peer Review 2 due December 15, noon Pacific.</p></div><span class="planned">Planned</span></li>
+    </ol></section>
 
-    <section class="section-wrap content-section" id="hardware">
-      <div class="section-heading"><div><div class="eyebrow">04 / HARDWARE</div><h2>Small and simple.</h2></div><p>A programmable mini drone and a laptop.</p></div>
-      <div class="hardware-layout"><div class="hardware-focus"><span class="mono">PLATFORM / 87 g</span><h3>DJI<br>RoboMaster TT</h3><div class="focus-rule"></div><p>Programmable over Wi-Fi, with a port for adding sensors.</p><a href="https://www.dji.com/support/product/robomaster-tt" target="_blank" rel="noopener noreferrer">Platform documentation </a><span class="hardware-note">Not yet flight-tested</span></div><div class="hardware-table-wrap"><table class="hardware-table"><caption class="visually-hidden">Hardware</caption><thead><tr><th>Part</th><th>Job</th></tr></thead><tbody><tr><th>RoboMaster TT<span>~8 min flights</span></th><td>Flies and takes Wi-Fi commands</td></tr><tr><th>Built-in camera<span>720p · 82.6° FOV</span></th><td>Sees the object</td></tr><tr><th><strong>Laptop</strong><span>Python</span></th><td>Runs the detector and the policy</td></tr></tbody></table></div></div>
-    </section>
+    <section class="supervisor-section"><div class="section-wrap supervisor-layout"><div><div class="eyebrow">INDEPENDENT SUPERVISION</div><h2>Stop when the evidence disappears.</h2><p>Both controllers share the same limits. Once the system enters the near-range region, a missing or stale forward reading blocks further approach. Actual braking margins and firmware failsafes still need validation.</p></div><div class="supervisor-flow"><div><span class="mono">CENTER</span><span>Confirm a fresh target</span></div><span aria-hidden="true">↓</span><div><span class="mono">APPROACH</span><span>Limit forward and yaw commands</span></div><span aria-hidden="true">↓</span><div><span class="mono">HOLD</span><span>Missing target, stale range or close wall</span></div><p>A lost radio link can prevent a laptop-issued land command from arriving. Flight dispatch and link-loss procedures must be tested on hardware.</p></div></div></section>
 
-    <section class="section-wrap research-section" id="evaluation"><div class="research-heading"><div class="eyebrow">05 / RESEARCH QUESTION</div><h2>Can a learned policy approach better than PID?</h2></div><div class="metrics-grid"><article><span class="metric-icon mono">e</span><h3>Final error</h3><p>How close to the hover spot</p></article><article><span class="metric-icon mono">Δt</span><h3>Time to arrive</h3><p>From first detection to hover</p></article><article><span class="metric-icon mono">∂a</span><h3>Smoothness</h3><p>No jerks or overshoot</p></article><article><span class="metric-icon mono">↻</span><h3>Success rate</h3><p>Arrives without losing the object</p></article></div></section>
-
-    <section class="section-wrap content-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow">06 / ROADMAP</div><h2>From the bench to a real flight.</h2></div><p>Weeks 1–2: planning and research. Weeks 3–12 below.</p></div><ol class="timeline"><li><div class="timeline-time">W03–04</div><div class="timeline-body"><h3>Test object detection on the TT camera</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W05–06</div><div class="timeline-body"><h3>Build the simulator and PID baseline</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W07–08</div><div class="timeline-body"><h3>Train PPO and compare with PID</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W09–10</div><div class="timeline-body"><h3>Put it all together, props off</h3></div><span class="planned">Planned</span></li><li><div class="timeline-time">W11–12</div><div class="timeline-body"><h3>Fly indoors to real objects</h3></div><span class="planned">Planned</span></li></ol></section>
-
-    <section class="supervisor-section"><div class="section-wrap supervisor-layout"><div><div class="eyebrow">SAFETY</div><h2>A policy needs a supervisor.</h2><p>Speed limits, a minimum distance and fallbacks run separately from the policy, and an operator can always take over.</p></div><div class="supervisor-flow"><div><span class="mono">APPROACH</span><span>Object detected</span></div><span aria-hidden="true">↓</span><div><span class="mono">HOLD / SEARCH</span><span>Object lost: stop, turn slowly</span></div><span aria-hidden="true">↓</span><div><span class="mono">LAND</span><span>Wi-Fi lost or operator</span></div></div></div></section>
-
-    <section class="section-wrap references-section" id="references"><div><div class="eyebrow">07 / REFERENCES</div><h2>Built on open tools.</h2></div><div class="reference-list"><a href="https://www.dji.com/support/product/robomaster-tt" target="_blank" rel="noopener noreferrer"><span>01</span>DJI RoboMaster TT<span></span></a><a href="https://robomaster-dev.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer"><span>02</span>RoboMaster developer guide<span></span></a><a href="https://docs.ultralytics.com/" target="_blank" rel="noopener noreferrer"><span>03</span>Ultralytics YOLO<span></span></a><a href="https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html" target="_blank" rel="noopener noreferrer"><span>04</span>Stable-Baselines3 PPO<span></span></a></div></section>
+    <section class="section-wrap references-section" id="references"><div><div class="eyebrow">06 / REPRODUCIBLE WORK</div><h2>Plans, code and evidence.</h2><p>Review the current plan, run the starter locally or inspect the experiment data. Drive documents may require team access.</p></div><div class="reference-list">
+      <a href="https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit"><span>01</span>Updated product requirements <span>↗</span></a>
+      <a href="https://drive.google.com/file/d/1CWB-8wcXvh0cUm5BgMetaEBFtSmdq6WW/view"><span>02</span>Starter code and experiment package <span>↗</span></a>
+      <a href="./evidence/results.json" download><span>03</span>Machine-readable results <span>↓</span></a>
+      <a href="https://github.com/damiafuentes/DJITelloPy"><span>04</span>DJITelloPy SDK adapter <span>↗</span></a>
+      <a href="https://github.com/RoboMaster/RMTT_Libs"><span>05</span>Official ESP32 support package <span>↗</span></a>
+      <a href="https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html"><span>06</span>Stable-Baselines3 PPO <span>↗</span></a>
+    </div></section>
   </main>
-  <footer class="footer section-wrap"><div><a class="footer-brand" href="#top">PosePilot</a><span>Open research in visual object approach.</span></div><div><a href="https://github.com/jonatl5/posepilot" target="_blank" rel="noopener noreferrer">Repository </a><span>© 2026 jonatl5 · MIT</span></div></footer>
-  <noscript><p class="noscript-note">JavaScript enables the interactive demo. The project introduction remains available without it.</p></noscript>
+  <footer class="footer section-wrap"><div><a class="footer-brand" href="#top">objectPilot</a><span>Object approach research · October 29, 2026</span></div><div><a href="./log.html">Read the progress log ↗</a><span>© 2026 jonatl5 · MIT</span></div></footer>
+  <noscript><p class="noscript-note">Prototype details and results are available without JavaScript. The supervisor explorer and rollout playback require JavaScript.</p></noscript>
 </body>
 </html>

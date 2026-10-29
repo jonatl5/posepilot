@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const root = fileURLToPath(new URL('../docs/', import.meta.url));
 const port = Number(process.env.PORT || 4317);
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8', '.csv': 'text/csv; charset=utf-8' };
 const server = http.createServer(async (request, response) => {
   try {
     let pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
@@ -18,4 +18,4 @@ const server = http.createServer(async (request, response) => {
     response.end(data);
   } catch { response.writeHead(404); response.end('Not found'); }
 });
-server.listen(port, '127.0.0.1', () => { process.stdout.write(`PosePilot preview: http://127.0.0.1:${port}/posepilot/\n`); });
+server.listen(port, '127.0.0.1', () => { process.stdout.write(`objectPilot preview: http://127.0.0.1:${port}/posepilot/\n`); });

@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-29",
+  "evidence_type": "synthetic sensor simulation",
+  "episodes": 30,
+  "seed_start": 10000,
+  "controllers": [
+    {
+      "id": "pid",
+      "title": "PID starting gains",
+      "successes": 30,
+      "episodes": 30,
+      "success_rate": 1.0,
+      "success_95pct_wilson": [
+        0.8864829086095221,
+        1.0
+      ],
+      "mean_success_time_s": 16.793333333333337,
+      "minimum_distance_violations": 0,
+      "mean_final_distance_error_m": 0.017243925390458607,
+      "evidence": "synthetic sensor simulation; not flight results",
+      "controller": "untuned PID starting gains",
+      "seed_start": 10000,
+      "randomized": true,
+      "model": null
+    },
+    {
+      "id": "ppo_smoke",
+      "title": "PPO 8,192 steps",
+      "successes": 0,
+      "episodes": 30,
+      "success_rate": 0.0,
+      "success_95pct_wilson": [
+        0,
+        0.113517091390478
+      ],
+      "mean_success_time_s": null,
+      "minimum_distance_violations": 0,
+      "mean_final_distance_error_m": 1.4452581078570206,
+      "evidence": "synthetic sensor simulation; not flight results",
+      "controller": "PPO",
+      "seed_start": 10000,
+      "randomized": true,
+      "model": "runs/ppo_smoke/policy.zip"
+    },
+    {
+      "id": "ppo",
+      "title": "PPO 100,352 steps",
+      "successes": 14,
+      "episodes": 30,
+      "success_rate": 0.4666666666666667,
+      "success_95pct_wilson": [
+        0.30232127224128236,
+        0.6385798671847496
+      ],
+      "mean_success_time_s": 14.407142857142857,
+      "minimum_distance_violations": 0,
+      "mean_final_distance_error_m": 0.0642911763719978,
+      "evidence": "synthetic sensor simulation; not flight results",
+      "controller": "PPO",
+      "seed_start": 10000,
+      "randomized": true,
+      "model": "runs/ppo_initial/policy.zip"
+    }
+  ]
+}

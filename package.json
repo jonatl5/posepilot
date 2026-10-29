@@ -1,5 +1,5 @@
 {
-  "name": "posepilot-website",
+  "name": "objectpilot-website",
   "version": "1.0.0",
   "private": true,
   "description": "Project website for a RoboMaster TT that recognizes an object and flies to it",
