@@ -1,50 +1,38 @@
-# objectPilot tasks
+# objectPilot task list
 
-Updated October 29, 2026. Printed-wall targets, fixed altitude, forward/yaw approach. Dates are Pacific Time. Earlier MediaPipe/person-following plans are superseded for active implementation.
+The canonical requirements are in [PRD.md](PRD.md). A checked software task is not hardware qualification.
 
-## Completed preparation
+## Completed software preparation
 
-- [x] Original planning and move to TT with laptop compute.
-- [x] Select wall prints for first demo; remove people/night operation from active scope.
-- [x] Python package, YOLO adapter, video/webcam dry runs, target confirmation and latest frame.
-- [x] Shared versioned 64-value state, PID/PPO supervisor, proximity/staleness/source checks.
-- [x] Seeded Gymnasium environment, PPO training/save/load and evaluation.
-- [x] Data extraction, group split, explicit reviewed labels and dataset preparation.
-- [x] Official ESP32 source inspection and range-age extension generator.
-- [x] Document collection procedure and observation/action contracts.
-- [x] Publish Rapid prototypes with recorded simulation and diagnostic episode data.
-- [x] Add an offline simulator demo, installation/run guide and no-hardware CI workflow.
+- [x] Preserve the team route: stationary wall prints, YOLO, forward ToF, PID/PPO and a shared 64-value contract.
+- [x] Import the linked starter source, existing simulator and data/firmware workflows with provenance.
+- [x] Keep the original 30-scenario diagnostic CSVs and trajectory unchanged.
+- [x] Integrate marker bench inputs, latest-frame video, camera calibration and grounded capture into the canonical package.
+- [x] Add measured arrival hold, stock-ToF freshness handling and close-range vetoes.
+- [x] Add a command-age/operator-heartbeat watchdog scaffold with fake-I/O checks.
+- [x] Add schema, timestamp, arrival, marker, range and replay regression tests.
+- [x] Provide an English data plan, hardware gates, control explanation, source archive and synchronized repository/website PRD.
 
-## Before November 3
+## Before delivery
 
-- [ ] A: review firmware, board toolchain and factory restoration; prepare bench procedure.
-- [ ] B: choose actual classes and prints; record grouped videos, annotate and benchmark.
-- [ ] B: fit per-print/per-camera visual scales using separate calibration samples.
-- [ ] C: tune PID and train at least three PPO seeds; select checkpoints on validation only.
-- [ ] C: expand independent range delay, burst loss and false-target scenarios beyond current randomization.
-- [ ] D: show detector dry run and synthetic closed loop separately, with measured timing and limits.
-- [ ] D: update the public progress log when real printed-target or hardware evidence becomes available.
+- [ ] Record and label real wall prints, distractors and negative clips.
+- [ ] Choose two or three target classes from measured pretrained-detector reliability.
+- [ ] Fit per-print visual scale on calibration-only data and benchmark held-out detection.
+- [ ] Tune PID, train multiple PPO seeds and reserve untouched final evaluation scenarios.
 
-## November 4–7 arrival qualification
+## Hardware and flight
 
-- [ ] Activate and record TT/ESP32 versions; verify factory restore procedure.
-- [ ] Measure forward range against a tape; distinguish downward telemetry.
-- [ ] Compile generated firmware for the delivered board; verify custom query, validity, sequence and age.
-- [ ] If needed, qualify external sensor voltage, I2C address ownership, mount and weight.
-- [ ] Measure camera calibration, optical overlap, body offsets, stream and query latency.
-- [ ] Implement one flight dispatcher, command watchdog, battery/telemetry freshness and manual takeover.
-- [ ] Validate command signs, stop/land and link-loss behavior before autonomous flight.
-- [ ] Measure low-speed response, braking, drift and battery effects; update simulator.
+- [ ] Identify exact aircraft, firmware, expansion board and sensor orientation.
+- [ ] Verify actual TT video, exposure-to-host delay and wireless behavior.
+- [ ] Compile/test firmware and validate sequence, sample age, invalid readings and query routing.
+- [ ] Measure physical command response, stopping drift, body/sensor offsets and battery effects.
+- [ ] Integrate one qualified flight sink, operator controls, confirmed landing and onboard link-loss behavior.
+- [ ] Complete repeated supervised PID approaches and record all failures/interventions.
+- [ ] Compare calibrated controllers only after the hardware gates pass.
+- [ ] Evaluate optional external ToF only if the built-in sensor measurements justify it.
 
-## Integration and final evaluation
+## Delivery
 
-- [ ] November 8–19: supervised PID printed-wall approach; TT-specific videos and detector validation.
-- [ ] Add bounded search/recovery only after clearance qualification; routes are not required.
-- [ ] November 10 noon: Peer Review 1.
-- [ ] November 20–December 3: tuned PID versus nominal/randomized PPO, shared held-out conditions.
-- [ ] If qualified, at least 10 paired flight trials/controller; report uncertainty and interventions.
-- [ ] December 3: feature freeze and choose most reliable demo controller.
-- [ ] December 4–9: rehearse; December 10: final demonstration.
-- [ ] December 15 noon: final report and Peer Review 2.
-
-No autonomous flight, firmware flashing, real dataset collection or hardware results are marked complete.
+- [ ] Select the most reliable qualified configuration at feature freeze.
+- [ ] Preserve model/configuration, calibration, validation/test splits, logs and limitations.
+- [ ] Keep dated evidence, progress pages and PRD statuses aligned after each implementation change.

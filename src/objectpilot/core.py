@@ -6,6 +6,8 @@ inputs, not metres/second. No ground-truth state enters FeatureBuilder.
 """
 from dataclasses import dataclass, asdict
 from collections import deque
+from pathlib import Path
+import json
 import math
 import re
 import numpy as np
@@ -40,6 +42,28 @@ class Config:
     rc_yaw_cap: int = 25
     max_steps: int = 400
 
+    def __post_init__(self):
+        for name, value in asdict(self).items():
+            if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be a finite positive number")
+        if self.history != 4 or type(self.history) is not int:
+            raise ValueError("Schema objectpilot-v1-16x4 requires four history ticks")
+        if not self.minimum_m < self.stand_off_m < self.near_entry_m <= self.forward_range_max_m:
+            raise ValueError("Require minimum < stand-off < near-entry <= forward range")
+        if not self.arrival_x < self.center_gate <= .5 or self.vertical_gate > .5:
+            raise ValueError("Invalid normalized centering tolerances")
+        if self.confidence_min > 1 or self.arrival_range_m >= self.stand_off_m-self.minimum_m:
+            raise ValueError("Invalid confidence or arrival tolerance")
+        for name in ("rc_forward_cap", "rc_yaw_cap", "max_steps"):
+            if type(getattr(self, name)) is not int:
+                raise ValueError(f"{name} must be an integer")
+        if max(self.rc_forward_cap, self.rc_yaw_cap) > 100:
+            raise ValueError("RC caps must not exceed 100")
+
+    @classmethod
+    def from_json(cls, path):
+        return cls(**json.loads(Path(path).read_text(encoding="utf-8")))
+
 @dataclass
 class Detection:
     cx: float
@@ -67,7 +91,8 @@ def parse_ext_tof(reply: str, timestamp: float) -> RangeSample:
     mm = int(match[1])
     if mm in (0, 8192, 65535):
         return RangeSample(None, timestamp, status="out_of_range")
-    return RangeSample(mm / 1000.0, timestamp)
+    # Receipt time is not sensor sample time. Stock replies may contain a cache.
+    return RangeSample(mm / 1000.0, timestamp, status="sample_age_unknown")
 
 class CustomRangeParser:
     """Reject duplicate/backwards samples; reset parser explicitly after MCU restart."""
@@ -76,10 +101,14 @@ class CustomRangeParser:
         self.reset_required = False
 
     def parse(self, reply, request_start, response_time):
+        if not all(math.isfinite(t) for t in (request_start, response_time)):
+            return RangeSample(None, 0., "forward_custom", "invalid_clock")
         match = re.fullmatch(r"\s*oprange (\d+) (\d+) (\d+) ([01]) (\d+)\s*", reply)
         if not match:
             return RangeSample(None, request_start, "forward_custom", "malformed")
         seq, device_ms, mm, valid, age_ms = map(int,match.groups())
+        if max(seq, device_ms, age_ms) >= 2**32 or mm > 65535:
+            return RangeSample(None, request_start, "forward_custom", "malformed")
         delta = None if self.previous_sequence is None else (seq-self.previous_sequence) % (2**32)
         if delta is not None and delta >= 2**31:
             self.reset_required = True
@@ -111,7 +140,7 @@ class FeatureBuilder:
             d = detection
             valid = all(math.isfinite(v) for v in asdict(d).values() if isinstance(v, (int, float)))
             valid = valid and 0 <= now-d.timestamp <= c.frame_stale_s
-            valid = valid and d.confidence >= c.confidence_min and 0 < d.height <= 1 and 0 < d.width <= 1
+            valid = valid and c.confidence_min <= d.confidence <= 1 and 0 < d.height <= 1 and 0 < d.width <= 1
             valid = valid and 0 <= d.cx <= 1 and 0 <= d.cy <= 1
         dvis = None
         if valid:
@@ -187,8 +216,16 @@ class Supervisor:
         self.previous = np.zeros(2, dtype=np.float32)
 
     def apply(self, action, observation, *, battery_ok=True, telemetry_fresh=True, operator_stop=False):
-        f, c = latest(observation), self.c
-        a = np.asarray(action, dtype=np.float32)
+        c = self.c
+        try:
+            obs = np.asarray(observation, dtype=np.float32)
+            a = np.asarray(action, dtype=np.float32)
+            if obs.shape != (16*c.history,):
+                raise ValueError("Wrong observation schema")
+            f = latest(obs)
+        except (ValueError, TypeError):
+            self.previous[:] = 0
+            return self.previous.copy(), "invalid_action_or_state"
         reason = "tracking"
         if a.shape != (2,) or not np.isfinite(a).all() or not np.isfinite(f).all():
             reason = "invalid_action_or_state"

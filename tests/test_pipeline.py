@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from stable_baselines3.common.env_checker import check_env
 from objectpilot.core import Config,Detection,RangeSample,FeatureBuilder,Supervisor,PID,parse_ext_tof,rc_channels
 from objectpilot.env import ApproachEnv
 from objectpilot.vision import TargetLock
@@ -57,7 +56,6 @@ def test_target_confirmation_requires_distinct_frames():
     assert lock.select([det()],4) is None
 
 def test_env_contract_and_reproducibility():
-    check_env(ApproachEnv(),warn=True)
     a,b=ApproachEnv(),ApproachEnv()
     oa,_=a.reset(seed=123); ob,_=b.reset(seed=123)
     assert np.array_equal(oa,ob)
@@ -66,6 +64,10 @@ def test_env_contract_and_reproducibility():
         assert np.array_equal(oa,ob) and (ra,ta,ua,ia)==(rb,tb,ub,ib)
         assert a.observation_space.contains(oa)
         if ta or ua: break
+
+def test_optional_sb3_environment_contract():
+    checker = pytest.importorskip("stable_baselines3.common.env_checker")
+    checker.check_env(ApproachEnv(), warn=True)
 
 def test_time_limit_is_truncation():
     env=ApproachEnv(Config(max_steps=1),randomized=False)

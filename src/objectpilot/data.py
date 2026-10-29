@@ -3,6 +3,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import shutil
 from pathlib import Path
 import cv2
@@ -55,9 +56,12 @@ def prepare(args):
     root = Path(args.out)
     groups, images, counts = {},set(),{s:0 for s in ("train","val","test")}
     labels = [n.strip() for n in args.classes.split(",")]
+    if not all(labels) or len(set(labels)) != len(labels):
+        raise ValueError("Class names must be nonempty and unique")
     for row in rows:
         if row["label_reviewed"].lower() != "yes": raise ValueError("Unreviewed label: "+row["image"])
         split = row["split"]; group = row["group_id"]
+        if not group.strip(): raise ValueError("A recording group_id is required")
         if split not in counts: raise ValueError("Invalid split")
         if group in groups and groups[group]!=split: raise ValueError("Group leakage")
         groups[group]=split
@@ -70,6 +74,7 @@ def prepare(args):
             values = list(map(float,line.split()))
             if len(values)!=5: raise ValueError("Expected YOLO class cx cy width height")
             k,x,y,w,h=values
+            if not all(math.isfinite(v) for v in values): raise ValueError("Nonfinite YOLO label")
             if not(k.is_integer() and 0<=k<len(labels) and 0<=x<=1 and 0<=y<=1 and 0<w<=1 and 0<h<=1):
                 raise ValueError(f"Invalid YOLO label {label}")
             if x-w/2 < -1e-5 or x+w/2>1.00001 or y-h/2 < -1e-5 or y+h/2>1.00001:
@@ -95,20 +100,30 @@ def main():
     e=sub.add_parser("extract"); e.add_argument("--manifest",required=True); e.add_argument("--out",required=True); e.add_argument("--fps",type=float,default=2)
     d=sub.add_parser("prepare"); d.add_argument("--frames",required=True); d.add_argument("--out",required=True); d.add_argument("--classes",required=True)
     t=sub.add_parser("train"); t.add_argument("--data",required=True); t.add_argument("--weights",default="yolo11n.pt"); t.add_argument("--epochs",type=int,default=50); t.add_argument("--device",default="cpu")
+    v=sub.add_parser("evaluate"); v.add_argument("--data",required=True); v.add_argument("--weights",required=True); v.add_argument("--split",choices=("val","test"),default="val"); v.add_argument("--device",default="cpu")
     c=sub.add_parser("calibrate"); c.add_argument("--csv",required=True,help="distance_m,box_height_fraction,split columns; calibration rows only")
     a=p.parse_args()
     if a.command=="extract":
-        if a.fps<=0: p.error("fps must be positive")
+        if not math.isfinite(a.fps) or a.fps<=0: p.error("fps must be finite and positive")
         extract(a)
     elif a.command=="prepare": prepare(a)
     elif a.command=="calibrate":
         import numpy as np
         rows=list(csv.DictReader(Path(a.csv).open()))
         if not rows or any(r["split"]!="calibration" for r in rows): raise ValueError("Use separate calibration data, never test data")
-        values=[float(r["distance_m"])*float(r["box_height_fraction"]) for r in rows]
+        pairs=[(float(r["distance_m"]),float(r["box_height_fraction"])) for r in rows]
+        if not all(np.isfinite(d) and d>0 and np.isfinite(h) and 0<h<=1 for d,h in pairs):
+            raise ValueError("Need positive distances and normalized box heights")
+        values=[d*h for d,h in pairs]
         if not all(np.isfinite(v) and v>0 for v in values): raise ValueError("Invalid calibration")
         print(json.dumps({"visual_scale_m":float(np.median(values)),"samples":len(values),"std_m":float(np.std(values))}))
+    elif a.command == "evaluate":
+        from ultralytics import YOLO
+        metrics = YOLO(a.weights).val(data=a.data,split=a.split,device=a.device,
+                                     project="runs/detector-eval",name=a.split,exist_ok=False)
+        print(json.dumps(metrics.results_dict,indent=2))
     else:
+        if a.epochs < 1: p.error("epochs must be positive")
         from ultralytics import YOLO
         model=YOLO(a.weights)
         model.train(data=a.data,epochs=a.epochs,imgsz=640,seed=0,device=a.device,

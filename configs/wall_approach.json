@@ -1,0 +1,20 @@
+{
+  "dt": 0.1,
+  "history": 4,
+  "stand_off_m": 0.65,
+  "minimum_m": 0.4,
+  "near_entry_m": 1.15,
+  "forward_range_max_m": 1.2,
+  "range_stale_s": 0.4,
+  "frame_stale_s": 0.35,
+  "visual_scale_m": 0.22,
+  "confidence_min": 0.45,
+  "center_gate": 0.12,
+  "vertical_gate": 0.15,
+  "arrival_x": 0.05,
+  "arrival_range_m": 0.08,
+  "arrival_hold_s": 2.0,
+  "rc_forward_cap": 20,
+  "rc_yaw_cap": 25,
+  "max_steps": 400
+}

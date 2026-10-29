@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#1435ee">
+<meta name="description" content="objectPilot aligned rapid prototype: YOLO wall prints, one 64-value control contract, grounded video, measured arrival and reproducible source.">
+<title>objectPilot — Aligned rapid prototypes</title><link rel="canonical" href="https://jonatl5.github.io/posepilot/prototypes.html"><link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./styles.css?v=prototype-2"><link rel="stylesheet" href="./prototypes.css?v=integrated-1"><script src="./prototypes.js?v=integrated-1" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="header"><div class="header-inner"><a class="brand" href="./" aria-label="objectPilot home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>objectPilot<span class="brand-tag">RESEARCH</span></a><nav class="nav" aria-label="Main navigation"><a href="./#prototypes">Rapid prototypes</a><a href="./#architecture">System</a><a href="./prd.html">PRD</a><a href="./#roadmap">Roadmap</a><a href="./log.html">Progress</a></nav><div class="header-actions"><a class="repo-link" href="https://github.com/jonatl5/posepilot">GitHub ↗</a></div></div></header>
+<main id="main">
+<section class="section-wrap page-intro">
+<div class="eyebrow">RAPID PROTOTYPES / INTEGRATED SOURCE</div><h1>One target.<br><span class="blue">One control contract.</span></h1>
+<p>The team starter and additional bench tools now share the same printed-wall approach pipeline. YOLO remains the main detector; red cards and ArUco markers make the interfaces easy to exercise before the aircraft arrives.</p>
+<div class="hero-buttons"><a class="button primary" href="./assets/objectpilot-starter.zip" download>Download runnable source ↓</a><a class="button secondary" href="#control-lab">Explore the control mapping</a></div>
+<p class="release-note">October 29, 2026 · software integration · actual aircraft qualification pending</p>
+</section>
+<div class="section-wrap evidence-strip" aria-label="Shared implementation contract">
+<div><strong>64 inputs</strong><span>16 features across four ticks</span></div><div><strong>10 Hz</strong><span>Initial control cadence</span></div><div><strong>2 channels</strong><span>Forward and yaw only</span></div><div><strong>0 flights</strong><span>No hardware outcome claimed</span></div>
+</div>
+<section class="section-wrap prototype-section" id="perception">
+<div class="section-heading"><div><div class="eyebrow">01 / SHARED PERCEPTION INTERFACE</div><h2>Different bench inputs.<br>The same state builder.</h2></div><p>Markers are test fixtures for the wall-approach pipeline. They do not replace the printed-object demonstration.</p></div>
+<div class="artifact-layout"><figure class="artifact-shot"><img src="./assets/aruco-reference.png" alt="Actual OpenCV detection of a generated ArUco marker, mapped into the shared 64-value observation" width="640" height="480"><figcaption>Generated image processed by the actual detector and shared controller. This is software evidence, not a photograph or drone camera recording.</figcaption></figure>
+<div class="body-copy"><p>Every adapter produces normalized center/size, class, confidence, frame ID and timestamp. Target confirmation, PID/PPO interfaces and the supervisor consume one versioned contract.</p><ul><li>YOLO11n for the selected object class.</li><li>ArUco/red-card inputs for training-free bench checks.</li><li>Latest-frame capture with explicit receipt timestamps.</li><li>Per-print visual-scale calibration; forward ToF for near approach.</li></ul>
+<pre class="run-command"><code>python -m pip install -e '.[test,markers]'
+python -m objectpilot.replay --source synthetic \
+  --detector aruco --seconds 5 \
+  --out runs/aruco-bench.jsonl</code></pre>
+<div class="inline-links"><a href="./assets/aruco-0.png" download>Print marker ID 0</a><a href="./assets/checkerboard-9x6.png" download>Calibration board</a></div></div></div>
+</section>
+<section class="section-wrap prototype-section" id="control-lab">
+<div class="section-heading"><div><div class="eyebrow">02 / IMAGE ERROR TO MOVEMENT</div><h2>Center, approach, hold.</h2></div><p>Explore the proportional part of the team's initial PID mapping and the key stop conditions.</p></div>
+<div class="control-lab"><div class="control-stage" role="img" aria-label="Illustrative target position and scale"><span class="stage-label">ILLUSTRATIVE IMAGE SPACE</span><div class="goal-box" aria-hidden="true"></div><div class="target-box" id="lab-target" aria-hidden="true"><img src="./assets/aruco-0.png" alt=""></div><span class="stage-warning" id="lab-stage-note">No drone connection</span></div>
+<div><div class="lab-inputs">
+<label for="lab-x"><span>Full-frame horizontal error <output id="lab-x-value">+0.25</output></span><input id="lab-x" type="range" min="-45" max="45" value="25" step="1"></label>
+<label for="lab-range"><span>Illustrative distance <output id="lab-range-value">1.80 m</output></span><input id="lab-range" type="range" min="25" max="300" value="180" step="1"></label>
+<label for="lab-age"><span>Observation age <output id="lab-age-value">0.10 s</output></span><input id="lab-age" type="range" min="0" max="800" value="100" step="10"></label>
+<label class="check-label" for="lab-visible"><input id="lab-visible" type="checkbox" checked>Target detected</label>
+<label class="check-label" for="lab-tof"><input id="lab-tof" type="checkbox" checked>Fresh forward sample when in range</label>
+<div class="lab-presets" aria-label="Control scenarios"><button type="button" data-preset="align">Off-center</button><button type="button" data-preset="approach">Centered and far</button><button type="button" data-preset="hover">At stand-off</button><button type="button" data-preset="lost">Target lost</button></div></div>
+<div class="command-panel" aria-live="polite"><div class="command-head"><output class="mono" id="lab-command">rc 0 0 0 22</output><output id="lab-state">CENTER</output></div><p id="lab-reason">Turn toward the target before moving forward.</p><p>Channel order: lateral · forward · vertical · yaw</p></div></div></div>
+<p class="section-note">Here ex = cx / frame width − 0.5. The illustration uses forward = 1.5 × (distance − 0.65) and yaw = 3.5 × ex, scaled to caps 20 and 25. It omits derivative response, action slew, temporal confirmation, the persistent near-range latch and the two-second arrival timer. The Python code implements those temporal checks. RC units are not calibrated physical speed.</p>
+</section>
+<section class="section-wrap prototype-section" id="integration">
+<div class="section-heading"><div><div class="eyebrow">03 / WHAT THE INTEGRATION ADDS</div><h2>Source, checks and clear limits.</h2></div><p>The original team results remain attributed to their original run. New checks are recorded separately.</p></div>
+<div class="table-scroll" role="region" aria-label="Implementation and remaining work" tabindex="0"><table class="evidence-table"><thead><tr><th scope="col">Area</th><th scope="col">Integrated work</th><th scope="col">Remaining qualification</th></tr></thead><tbody>
+<tr><td>Code and policy interface</td><td>Team source, simulator and training tools committed with the 16 × 4 schema</td><td>PID tuning, multiple policy seeds and final held-out comparison</td></tr>
+<tr><td>Camera input</td><td>File/webcam/synthetic replay; ground-only TT video and range queries</td><td>Actual aircraft video, Wi-Fi delay and exposure timing</td></tr>
+<tr><td>Arrival and range</td><td>Two-second measured hold; unknown stock sample age cannot authorize approach</td><td>Actual sensor freshness, geometry and stopping drift</td></tr>
+<tr><td>Command supervision</td><td>Independent age/heartbeat watchdog scaffold with fake I/O tests</td><td>Qualified sink, operator controls and onboard link-loss behavior</td></tr>
+<tr><td>Data workflow</td><td>Collection, reviewed labels, grouped splits, calibration and evaluation tools</td><td>Real printed-target dataset and measured detector quality</td></tr>
+</tbody></table></div>
+<div class="inline-links"><a href="./evidence/integration/validation.json">Integration verification record</a><a href="./evidence/integration/demo-pid.html">Play the offline PID demo ↗</a><a href="./#results">Original team diagnostics</a><a href="https://github.com/jonatl5/posepilot/blob/main/research/ALIGNMENT.md">Route comparison and provenance ↗</a></div>
+<pre class="run-command"><code>python -m pytest -q
+python -m objectpilot.evaluate --episodes 30 \
+  --seed 20000 --out runs/pid-integration</code></pre>
+</section>
+<section class="section-wrap prototype-section"><div class="section-heading"><div><div class="eyebrow">NEXT / ACTUAL HARDWARE</div><h2>Measure before flight.</h2></div><p>Identify the delivered board, calibrate the camera and range sensor, and qualify command response and operator control.</p></div><div class="body-copy"><p>The public camera commands are ground-only. The dispatcher is an integration scaffold and has not flown a drone. Optional IR ranging does not establish night-flight capability.</p></div><div class="hero-buttons"><a class="button primary" href="./prd.html#evaluation">Read the acceptance gates</a><a class="button secondary" href="https://github.com/jonatl5/posepilot/blob/main/research/HARDWARE_GATES.md">Hardware checklist ↗</a></div></section>
+</main>
+<footer class="footer section-wrap"><div><a class="footer-brand" href="./">objectPilot</a><span>One contract. Traceable evidence.</span></div><div><a href="./prd.html">Product requirements ↗</a><span>© 2026 jonatl5 · MIT</span></div></footer>
+<noscript><p class="noscript-note">Evidence and downloads are available without JavaScript. The control illustration requires JavaScript.</p></noscript>
+</body></html>

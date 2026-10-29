@@ -49,3 +49,45 @@ class YOLODetector:
                 cx,cy,w,h = box.xywhn[0].cpu().tolist()
                 detections.append(Detection(cx,cy,w,h,float(box.conf.item()),timestamp,frame_id,label))
         return detections
+
+
+class MarkerDetector:
+    """Training-free bench targets using the same normalized Detection contract.
+
+    Markers exercise the pipeline; the demonstration target remains a wall print
+    detected by YOLO. They do not introduce a second controller or policy schema.
+    """
+    def __init__(self, kind="aruco", marker_id=0):
+        import cv2
+        if kind not in ("aruco", "red") or not 0 <= marker_id < 50:
+            raise ValueError("Use red/aruco and a DICT_4X4_50 marker ID")
+        self.kind, self.marker_id = kind, marker_id
+        if kind == "aruco":
+            self.aruco = cv2.aruco.ArucoDetector(
+                cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
+
+    def detect(self, frame, timestamp, frame_id):
+        import cv2
+        import numpy as np
+        h, w = frame.shape[:2]
+        boxes = []
+        if self.kind == "aruco":
+            corners, ids, _ = self.aruco.detectMarkers(frame)
+            if ids is not None:
+                for corner, ident in zip(corners, ids.ravel()):
+                    if int(ident) == self.marker_id:
+                        points = corner.reshape(-1, 2)
+                        lo, hi = points.min(axis=0), points.max(axis=0)
+                        boxes.append((*lo, *(hi-lo), f"aruco:{self.marker_id}"))
+        else:
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, (0, 100, 70), (10, 255, 255))
+            mask |= cv2.inRange(hsv, (170, 100, 70), (179, 255, 255))
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours:
+                if cv2.contourArea(contour) >= .001*w*h:
+                    boxes.append((*cv2.boundingRect(contour), "red_marker"))
+        return [Detection(float((x+bw/2)/w), float((y+bh/2)/h), float(bw/w), float(bh/h),
+                          1., timestamp, frame_id, label)
+                for x, y, bw, bh, label in boxes if bw > 0 and bh > 0]

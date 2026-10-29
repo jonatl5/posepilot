@@ -1,0 +1,112 @@
+{
+  "date": "2026-10-29",
+  "scope": "Integrated software verification; not aircraft tests",
+  "base_commit": "50d18b8446a799b8f5ac984acf1f912b1a31f100",
+  "schema": "objectpilot-v1-16x4",
+  "config": {
+    "dt": 0.1,
+    "history": 4,
+    "stand_off_m": 0.65,
+    "minimum_m": 0.4,
+    "near_entry_m": 1.15,
+    "forward_range_max_m": 1.2,
+    "range_stale_s": 0.4,
+    "frame_stale_s": 0.35,
+    "visual_scale_m": 0.22,
+    "confidence_min": 0.45,
+    "center_gate": 0.12,
+    "vertical_gate": 0.15,
+    "arrival_x": 0.05,
+    "arrival_range_m": 0.08,
+    "arrival_hold_s": 2.0,
+    "rc_forward_cap": 20,
+    "rc_yaw_cap": 25,
+    "max_steps": 400
+  },
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Darwin arm64",
+    "packages": {
+      "numpy": "2.3.5",
+      "opencv-contrib-python": "4.11.0.86",
+      "gymnasium": "1.0.0",
+      "pytest": "8.3.5"
+    }
+  },
+  "pytest": {
+    "passed": 33,
+    "skipped": 1,
+    "skip_reason": "Optional Stable-Baselines3 environment checker: dependency unavailable; installation download failed"
+  },
+  "synthetic_image_replay": {
+    "aruco": {
+      "samples": 45,
+      "selected_target_samples": 43,
+      "all_observations_64": true,
+      "all_dry_run": true,
+      "all_lateral_vertical_zero": true,
+      "supervisor_counts": {
+        "stale_or_missing_detection": 2,
+        "tracking": 7,
+        "centering": 3,
+        "near_range_unavailable": 33
+      }
+    },
+    "red": {
+      "samples": 45,
+      "selected_target_samples": 43,
+      "all_observations_64": true,
+      "all_dry_run": true,
+      "all_lateral_vertical_zero": true,
+      "supervisor_counts": {
+        "stale_or_missing_detection": 2,
+        "tracking": 7,
+        "centering": 2,
+        "near_range_unavailable": 34
+      }
+    }
+  },
+  "pid_simulation": {
+    "episodes": 30,
+    "success_rate": 0.9333333333333333,
+    "success_95pct_wilson": [
+      0.7867618227892791,
+      0.9815233646723066
+    ],
+    "mean_success_time_s": 15.089285714285714,
+    "minimum_distance_violations": 0,
+    "mean_final_distance_error_m": 0.04985353200832516,
+    "evidence": "synthetic sensor simulation; not flight results",
+    "controller": "untuned PID starting gains",
+    "seed_start": 20000,
+    "randomized": true,
+    "model": null
+  },
+  "image_fixture": {
+    "detector": "OpenCV ArUco",
+    "horizontal_error": 0.18671876192092896,
+    "observation_size": 64,
+    "rc": [
+      0,
+      0,
+      0,
+      8
+    ],
+    "range_source": "synthetic fixture"
+  },
+  "not_retested": [
+    "YOLO neural inference",
+    "PPO training or checkpoint inference",
+    "PyAV H.264 decoding in this Python environment",
+    "Actual TT video and range",
+    "Firmware compilation/flashing",
+    "Flight dispatch/landing and radio loss"
+  ],
+  "provenance": "Original team evidence remains unchanged in the parent evidence directory. New seeds 20000\u201320029 are development diagnostics, not final held-out evidence.",
+  "offline_pid_demo": {
+    "seed": 10000,
+    "outcome": "success",
+    "time_s": 16.9,
+    "final_clearance_m": 0.6566483174008397
+  }
+}

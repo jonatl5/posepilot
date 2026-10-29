@@ -1,0 +1,28 @@
+{
+  "source": "https://drive.google.com/file/d/1CWB-8wcXvh0cUm5BgMetaEBFtSmdq6WW/view",
+  "archive_sha256": "225a472b028d1487e74e7bf9f10f741c28bf5eb0f1026d07e10ca090bd720f1b",
+  "repository_base": "8407cb14ac1a5171274565fa4bac3c68301c7bde",
+  "original_files_sha256": {
+    "pyproject.toml": "fee69f2a3a3213c567bb7a30bdfad03d758d665d3273f291977615a93b5ca2a5",
+    "src/objectpilot/__init__.py": "02167c4fb9211dfbff163d2255fdc636575a288ea96ff029deb60215778c6638",
+    "src/objectpilot/core.py": "a2b8e9a9143ebc186d729460b714dd9d4159a0cf2ceec8530983bb644e2c902a",
+    "src/objectpilot/vision.py": "94853cf512ebfadd1995e910d9fa7b871e5c8e38d8ee08b73dd27192f7215414",
+    "src/objectpilot/env.py": "7abcb5c027feab860bd243990bda8a14d4b02fc9b90f0341680e3ea625dd60c0",
+    "src/objectpilot/train.py": "44ef0bfd5a0148cc9cf008e1cfa75642e85bb2d8e9a808375a712bfd02eb5300",
+    "src/objectpilot/evaluate.py": "221455f942d1429528c9118a896948a0a9927809e728e1156a4734bac3c58e5b",
+    "src/objectpilot/replay.py": "28c7cf935da8f24c187c82253150a066183c842a143dcda1b1e717c6cb42cffc",
+    "src/objectpilot/data.py": "660cde62fa5dc53d7f588b0c79703f74860c604332e658f3b67763ba7fce6a17",
+    "src/objectpilot/bench.py": "8d6aee9111c826ce716fa43b88ccf9c0304c6f41d7670f47675a0adb1cc5595d",
+    "tests/test_pipeline.py": "64890d833836f804d4c45e2190e881ff4324fd36feec6c7221bb92d34cf24437",
+    "tests/test_data.py": "4ef31e2065a1a6239c628432191af98a5ccb38d3cd26b48039170711c1a1c54b",
+    "firmware/README.md": "82b4649cc4913ecc0af50211c42fa5ed7c1cb385e8a6a9c06687b65cec3ee46f",
+    "firmware/prepare_firmware.py": "0a705ef7f93919e994c92bb5334374a672b2e20753432db1de2e8a0a30f66787",
+    "firmware/range_snapshot.h": "6fc7d3b2a74445464daa3e778794487d70ed8204556343d28ece4f31e6289561",
+    "firmware/external_vl53l1x.h": "e20ab107554d78d0f352a953d8a88be6a04dc4dffe54088549ecc4046db33b41",
+    "data/clips.example.csv": "fdd1c1025f125e063748ebacd3b8317a7f43eee7170aaf8805fa97015fc7cc6c",
+    "research/interfaces.md": "80e825de73a628c8af6c93a44b7f770f5220e6f4b754eec2fd61dd153ac16690",
+    "research/references.md": "67d2d1faf1173e85c42e51c2bf033fcfc458641b78ed5378d5837ea6f92234b7"
+  },
+  "note": "Original source hashes before integration. Existing team authorship and license are retained; repository changes are documented in research/ALIGNMENT.md.",
+  "integrated_repository_base": "50d18b8446a799b8f5ac984acf1f912b1a31f100"
+}

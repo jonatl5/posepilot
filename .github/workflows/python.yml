@@ -9,6 +9,10 @@ on:
       - 'pyproject.toml'
       - 'requirements-lock.txt'
       - 'README.md'
+      - 'docs/**'
+      - 'research/**'
+      - 'configs/**'
+      - 'scripts/**'
       - '.github/workflows/python.yml'
   pull_request:
     paths:
@@ -18,6 +22,10 @@ on:
       - 'pyproject.toml'
       - 'requirements-lock.txt'
       - 'README.md'
+      - 'docs/**'
+      - 'research/**'
+      - 'configs/**'
+      - 'scripts/**'
       - '.github/workflows/python.yml'
   workflow_dispatch:
 
@@ -36,9 +44,18 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: Install software dependencies
-        run: python -m pip install -e ".[vision,test]"
+        run: python -m pip install -e ".[vision,test,rl]"
       - name: Unit and environment tests
         run: python -m pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: English repository and synchronized website requirements
+        run: |
+          python scripts/check_repository.py
+          node scripts/build-prd.mjs
+          git diff --exit-code -- PRD.md docs/PRD.md docs/prd.html
+          node scripts/check-site.mjs
       - name: Offline demo and PPO save/load smoke test
         run: |
           python -m objectpilot.demo --out runs/ci_pid

@@ -1,0 +1,308 @@
+{
+  "title": "objectPilot Product Requirements",
+  "edition": "Integrated repository edition \u00b7 October 29, 2026",
+  "source_url": "https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit",
+  "source_revision": "Aligned with the team's October 29, 2026 Revision 2 PRD",
+  "overview": [
+    "Recognize a stationary printed object image on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A laptop runs YOLO11n, a PID baseline or PPO policy, and an independent supervisor. The ESP32 expansion supplies forward infrared time-of-flight measurements.",
+    "The primary demonstration uses matte wall prints, normal indoor lighting and fixed altitude. Physical three-dimensional objects require a separate validation stage. The aircraft is still awaiting delivery; no real TT flight or sensor qualification is claimed.",
+    "The repository now contains the team starter implementation and aligned additions. YOLO wall prints remain the demonstration target. ArUco/red-card inputs are bench fixtures using the same 64-value contract, PID/PPO interface and supervisor."
+  ],
+  "scope": [
+    [
+      "Primary target",
+      "Two or three common-object categories depicted in matte wall prints; select classes through measured detector reliability."
+    ],
+    [
+      "Actions",
+      "Forward and yaw only. Lateral and throttle outputs stay zero; onboard flight stabilization holds altitude."
+    ],
+    [
+      "Provisional distances",
+      "Wall-track simulation: 0.65 m stand-off and 0.40 m minimum. Distances are unqualified settings, not approved physical clearances."
+    ],
+    [
+      "Arrival",
+      "Fresh associated forward range, horizontal centering within 0.05 frame widths, range within 0.08 m of stand-off and a two-second stable hold."
+    ],
+    [
+      "Not in the first demonstration",
+      "Moving targets, person following, identity recognition, night flight, policy-controlled altitude, onboard neural inference or landing on the target."
+    ]
+  ],
+  "requirements": [
+    {
+      "id": "F1",
+      "area": "Video",
+      "requirement": "Newest-frame buffering with frame ID and host receive timestamp; measure capture-to-host delay separately.",
+      "priority": "Must",
+      "status": "Latest-frame webcam/synthetic/Tello decoder integrated; actual TT stream qualification pending"
+    },
+    {
+      "id": "F2",
+      "area": "Detection",
+      "requirement": "YOLO detection of the selected printed-object class; output normalized box, confidence and timestamps.",
+      "priority": "Must",
+      "status": "YOLO integration exercised; printed-target accuracy pending"
+    },
+    {
+      "id": "F3",
+      "area": "Selection",
+      "requirement": "Three fresh-frame confirmation, same-class association and explicit loss; reject silent identity switches.",
+      "priority": "Must",
+      "status": "Three-frame same-class target confirmation retained; real distractor tests pending"
+    },
+    {
+      "id": "F4",
+      "area": "State",
+      "requirement": "One versioned 16-feature schema and four-tick history shared by simulation, replay and deployment.",
+      "priority": "Must",
+      "status": "Canonical 16 x 4 contract retained across simulation and camera pipeline; incompatible commands rejected"
+    },
+    {
+      "id": "F5",
+      "area": "Policy",
+      "requirement": "Deterministic PPO inference on the laptop; save model, config, scaling, schema and seed together.",
+      "priority": "Must",
+      "status": "Initial offline training/evaluation completed; flight deployment pending"
+    },
+    {
+      "id": "F6",
+      "area": "Baseline",
+      "requirement": "Configurable PID using the same observation and supervisor; tune on validation scenarios.",
+      "priority": "Must",
+      "status": "Initial gains evaluated; tuning and hardware response calibration pending"
+    },
+    {
+      "id": "F7",
+      "area": "Control",
+      "requirement": "Two channels, forward and yaw; zero lateral/throttle in the initial design. RC values require response calibration.",
+      "priority": "Must",
+      "status": "One forward/yaw mapping with zero lateral/vertical outputs; physical response calibration pending"
+    },
+    {
+      "id": "F8",
+      "area": "Arrival",
+      "requirement": "Fresh associated ToF, centering/range tolerances and two-second hold; then terminate the approach and maintain hover.",
+      "priority": "Must",
+      "status": "Measured two-second arrival hold integrated in replay; physical drift and wall arrival unverified"
+    },
+    {
+      "id": "F9",
+      "area": "Supervisor",
+      "requirement": "Reject stale/missing detections, invalid actions, stale telemetry and near-range loss. Close raw range overrides association.",
+      "priority": "Must",
+      "status": "Stale input, near-range loss, invalid state and raw proximity guards covered by software checks"
+    },
+    {
+      "id": "F10",
+      "area": "Flight gate",
+      "requirement": "Single dispatcher, operator takeover, command watchdog and tested link-loss behavior before autonomous flight.",
+      "priority": "Must",
+      "status": "Independent command/heartbeat watchdog scaffold added with injected test I/O; no live flight launcher or hardware qualification"
+    },
+    {
+      "id": "F11",
+      "area": "Dry run",
+      "requirement": "Camera/video pipeline produces logs and proposed bounded RC values without sending flight commands.",
+      "priority": "Must",
+      "status": "Ground-only file/webcam/synthetic/Tello entry point; no takeoff or RC send path"
+    },
+    {
+      "id": "F12",
+      "area": "Logging",
+      "requirement": "Record source/receipt timestamps, detections, range/status/age, features, proposed/safe actions, model/config and outcome.",
+      "priority": "Must",
+      "status": "Diagnostic outputs available; hardware provenance pending"
+    },
+    {
+      "id": "F13",
+      "area": "Simulator",
+      "requirement": "Planar wall-target environment with first-order response, action/observation delay, noise and dropout; seeded reset.",
+      "priority": "Must",
+      "status": "Planar simulator and initial comparisons completed"
+    },
+    {
+      "id": "F14",
+      "area": "Calibration",
+      "requirement": "Fit per-print/per-camera visual scale with separate calibration data; invalidate after resizing/camera changes.",
+      "priority": "Must",
+      "status": "Per-print visual-scale workflow and intrinsic-calibration utility included; actual measurements pending"
+    },
+    {
+      "id": "F15",
+      "area": "Range",
+      "requirement": "Separate forward ToF from downward telemetry; units, invalid sentinels and sample age checked explicitly.",
+      "priority": "Must",
+      "status": "Stock query sample age remains unknown; custom sequence/age parsing and raw-close veto integrated"
+    },
+    {
+      "id": "F16",
+      "area": "Firmware",
+      "requirement": "Generate a reviewed ESP32 extension exposing sequence, validity and age; compile/flash/test after board identification.",
+      "priority": "Must",
+      "status": "Extension generated; board compilation/flashing unverified"
+    },
+    {
+      "id": "F17",
+      "area": "External ToF",
+      "requirement": "Optional VL53L1X backend with verified electrical interface and no I2C address conflict.",
+      "priority": "Could",
+      "status": "Optional adapter prepared and disabled"
+    },
+    {
+      "id": "F18",
+      "area": "Dataset",
+      "requirement": "Group split by session/room/print family, explicit negatives, manually reviewed YOLO labels and held-out TT data.",
+      "priority": "Must",
+      "status": "Team grouped-data tools retained; collection, label validation and held-out detector evaluation added"
+    }
+  ],
+  "nonfunctional": [
+    [
+      "Control cadence",
+      "10 Hz initial wall-track design; measure the delivered pipeline."
+    ],
+    [
+      "Latency",
+      "Report median and p95 capture-to-host, inference and command timing separately. Host timestamps do not establish camera exposure time."
+    ],
+    [
+      "Action limits",
+      "Initial forward cap 20 and yaw cap 25 RC units; calibrate their physical effects."
+    ],
+    [
+      "Freshness",
+      "Initial image-age limit 0.35 s and range-age limit 0.40 s. A cached sensor reply must not acquire a new sample timestamp."
+    ],
+    [
+      "Environment",
+      "Short supervised indoor trials on a lit, textured floor; confirm battery budget and installed hardware mass."
+    ],
+    [
+      "Reproducibility",
+      "Record seed, software versions, model/configuration, feature schema, calibration and logs for each run."
+    ],
+    [
+      "Licensing",
+      "Preserve third-party software, model and data terms separately from this repository's MIT license."
+    ]
+  ],
+  "schema": [
+    [
+      "0\u20133",
+      "Horizontal/vertical center error, scaled log visual-distance error and calibrated visual range."
+    ],
+    [
+      "4\u20138",
+      "Forward range, forward-valid flag, association flag, detector confidence and detection-valid flag."
+    ],
+    [
+      "9\u201312",
+      "Frame age, range age, center-error rate and log-size rate."
+    ],
+    [
+      "13\u201315",
+      "Previous supervised forward/yaw actions and a latched near-range requirement."
+    ],
+    [
+      "History / outputs",
+      "Sixteen ordered float32 values stacked across four ticks: 64 inputs. Two normalized outputs: forward and yaw."
+    ]
+  ],
+  "sensor": [
+    "Measure the factory forward ToF first. EXT tof? returns millimeters; invalid sentinels are rejected. Stock replies have unknown sample age and cannot authorize near approach or arrival. A recent close stock reading still vetoes motion. Downward telemetry is never forward clearance.",
+    "The prepared EXT oprange? extension is application-defined, not an official DJI command. It is intended to expose a sample sequence, validity and age; compilation, query routing and returned freshness must be verified on the delivered ESP32/firmware.",
+    "Forward range near the wall is required for the primary arrival rule. Close raw proximity overrides target association. Once near-range dependence is latched, invalid or stale range blocks further approach.",
+    "An external VL53L1X remains optional and disabled until its voltage, I2C ownership/address, mounting and optical axis are verified. IR ranging is not IR imaging; adding a forward sensor does not qualify low-light flight or fix downward position hold."
+  ],
+  "data": [
+    "Record real printed targets in the intended room: approaches, yaw, pauses, occlusions, partial crops, distractors and empty walls. Use marked distances and a repeatable camera height; a moving clip cannot use one distance label for every frame.",
+    "Start with pretrained YOLO11n. Fine-tune only when held-out tests show a useful gap. Review detection boxes and explicit negative labels; split by recording session, room and print family rather than adjacent frames.",
+    "Fit visual scale using a separate calibration set for each print size and camera. After delivery, collect TT footage and measure camera geometry, exposure/transport delay, range validity and control response.",
+    "Videos support perception and noise estimation. PPO requires an interactive simulator whose next state responds to its actions; a prerecorded video cannot establish closed-loop control performance."
+  ],
+  "evidence": [
+    [
+      "Original team diagnostics",
+      "15 reported automated checks; 30 scenarios, seeds 10000\u201310029. Initial PID 30/30, PPO at 100,352 transitions 14/30, PPO at 8,192 transitions 0/30. Published results and trace are preserved verbatim."
+    ],
+    [
+      "Integrated implementation",
+      "Integrated on top of the teammate source publication at 50d18b8. The offline demo, template, tests and CI are retained. Shared 64-value camera pipeline, marker bench inputs, grounded video/range capture, measured arrival and dispatcher fault checks added; 33 local tests pass, one optional SB3 check skipped. See the dated integration validation record."
+    ],
+    [
+      "Comparison boundary",
+      "The earlier local 11-input marker controller is superseded, not deployed. Its 50-scenario score and 52-test suite are not evidence for this integrated implementation."
+    ],
+    [
+      "Hardware evidence",
+      "No TT flight, real printed-target accuracy, sensor cadence, firmware compilation/flashing or qualified braking margin is established. The dispatcher is tested with fake I/O only."
+    ]
+  ],
+  "evaluation": [
+    "Retain PID as the demonstration baseline unless a qualified alternative is more reliable. Compare tuned PID, nominal PPO and randomized PPO with identical detector settings, action caps and supervisor.",
+    "Train at least three PPO seeds. Select checkpoints and gains using validation only, then freeze them. The 30 already-inspected diagnostic seeds are development data; use new held-out scenarios for the final comparison.",
+    "Start with 100 held-out simulated episodes per training seed. Aim for at least ten paired hardware trials per controller after hardware gates pass; report actual sample size, failures and interventions.",
+    "Report success with Wilson intervals, measured wall-distance and image-center error, arrival time with failure outcomes, command changes, overshoot and minimum clearance. Do not claim a speed winner by dropping PPO failures."
+  ],
+  "gates": [
+    [
+      "G1 \u00b7 Perception bench",
+      "Benchmark real wall prints, distractors and negatives; verify calibration and record timing distributions."
+    ],
+    [
+      "G2 \u00b7 Platform and sensing",
+      "Identify firmware/board, verify query routing, sample freshness and camera/ToF geometry against measured distances."
+    ],
+    [
+      "G3 \u00b7 Flight dispatch",
+      "Qualify a single dispatcher, operator takeover, independent command-age watchdog, battery/telemetry handling and onboard link-loss behavior."
+    ],
+    [
+      "G4 \u00b7 Conservative PID flight",
+      "Measure command response, stopping drift and sensor-to-propeller offset; demonstrate repeated supervised approaches within the qualified envelope."
+    ],
+    [
+      "G5 \u00b7 Policy comparison",
+      "Update simulation from measurements; validate multiple seeds and held-out conditions before any policy flight."
+    ],
+    [
+      "G6 \u00b7 Demonstration freeze",
+      "Select the most reliable validated configuration and preserve its model/configuration, evidence and known limitations."
+    ]
+  ],
+  "milestones": [
+    [
+      "Oct 29",
+      "Rapid prototypes: separate synthetic-control and camera-only evidence."
+    ],
+    [
+      "Oct 30\u2013Nov 3",
+      "Printed-target collection, detector benchmark and November 3 status presentation."
+    ],
+    [
+      "Nov 4\u20137",
+      "Approximate delivery, platform bring-up, camera/range tests and measured response. Arrival remains subject to confirmation."
+    ],
+    [
+      "Nov 8\u201319",
+      "Supervised PID trials and repeatability; Peer Review 1 due November 10 at noon Pacific."
+    ],
+    [
+      "Nov 20\u2013Dec 3",
+      "Calibrated controller comparison; feature freeze December 3."
+    ],
+    [
+      "Dec 4\u201315",
+      "Rehearse December 4\u20139; demonstration December 10; final report and Peer Review 2 December 15 at noon Pacific."
+    ]
+  ],
+  "risks": [
+    "Printed-image domain shift, visual-scale bias, Wi-Fi delay and missed detections can produce incorrect approach commands.",
+    "Range may be cached, stale, out of range or associated with the wrong surface; sensor sample age and mounting geometry require independent checks.",
+    "Simulation-to-flight mismatch, battery degradation and poor floor texture/lighting can invalidate software-only results.",
+    "A broken radio link can prevent a laptop-issued land command from arriving. Flight safety depends on qualified onboard behavior and an operator procedure.",
+    "If delivery slips, reduce optional features instead of skipping calibration or the flight gates."
+  ]
+}

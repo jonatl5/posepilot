@@ -8,12 +8,15 @@ version = "0.1.0"
 description = "Pre-hardware RoboMaster TT object approach research pipeline"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-dependencies = ["numpy>=1.26,<3", "gymnasium>=1.0,<2", "stable-baselines3>=2.4,<3"]
+dependencies = ["numpy>=1.26,<3", "gymnasium>=1.0,<2"]
 
 [project.optional-dependencies]
-vision = ["opencv-python>=4.10,<6", "ultralytics>=8.3,<9"]
+vision = ["opencv-contrib-python>=4.10,<5", "ultralytics>=8.3,<9"]
+markers = ["opencv-contrib-python>=4.10,<5"]
+rl = ["stable-baselines3>=2.4,<3"]
 hardware = ["djitellopy>=2.5,<3", "pyserial>=3.5,<4"]
 test = ["pytest>=8,<10"]
+video = ["av>=12,<20"]
 
 [project.scripts]
 objectpilot-demo = "objectpilot.demo:main"
