@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>objectPilot — Offline simulator demo</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#17233a;background:#eef2f8;font-size:17px}*{box-sizing:border-box}body{margin:0;padding:32px 20px}main{max-width:1050px;margin:auto}h1{font-size:clamp(1.9rem,5vw,3rem);margin:10px 0;letter-spacing:-.04em}p{line-height:1.7;color:#4e607b}.tag{color:#1435ee;font-size:.8rem;font-weight:700;letter-spacing:.08em}.panel{background:white;border:1px solid #ccd6e7;border-radius:12px;padding:24px;margin-top:24px}canvas{display:block;width:100%;height:auto;background:#f8faff;border-radius:6px}.legend{display:flex;gap:24px;flex-wrap:wrap;font-size:.9rem;color:#4e607b;margin:14px 0}.legend span:first-child{color:#167151}.legend span:last-child{color:#a53a29}dl{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin:22px 0}dt{font-size:.85rem;color:#596b86}dd{font-family:ui-monospace,monospace;margin:8px 0 0;line-height:1.6}button{font:inherit;border:0;background:#1435ee;color:white;padding:12px 22px;border-radius:6px;min-width:100px;cursor:pointer}button+button{background:#e7edf9;color:#1435ee;margin-left:8px}input{width:100%;accent-color:#1435ee;height:34px;margin:10px 0}label{font-size:.9rem}button:focus-visible,input:focus-visible{outline:3px solid #e68e22;outline-offset:3px}#note{font-size:.9rem;margin-bottom:0}code{font-size:.9em}@media(max-width:650px){body{padding:24px 14px}.panel{padding:18px}dl{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body><main>
+<span class="tag">OBJECTPILOT / OFFLINE SIMULATION</span>
+<h1>Approach a printed wall target.</h1>
+<p>This is a recorded rollout of the Python control environment. It uses synthetic detections and range measurements. No YOLO inference, camera connection or flight command runs in this demo.</p>
+<section class="panel" aria-label="Recorded rollout">
+<p id="identity"></p>
+<canvas id="scene" width="960" height="440" role="img" aria-label="Recorded drone position relative to the wall"></canvas>
+<div class="legend"><span id="goal"></span><span id="minimum"></span></div>
+<dl><div><dt>Elapsed</dt><dd id="time"></dd></div><div><dt>Wall clearance (truth)</dt><dd id="clearance"></dd></div><div><dt>Dry RC: lr, fb, ud, yaw</dt><dd id="rc"></dd></div><div><dt>Recorded episode outcome</dt><dd id="outcome"></dd></div></dl>
+<label for="position">Replay position</label><input id="position" type="range" min="0" value="0" step="1">
+<button id="play" type="button" aria-pressed="false">Play</button><button id="reset" type="button">Reset</button>
+<p id="note"></p>
+</section>
+<p>The simulator is planar and holds altitude outside the policy. Stand-off and minimum clearance are provisional settings. Inspect <code>summary.json</code> and <code>trajectory.jsonl</code> beside this file for the seed, configuration, observations and supervised actions.</p>
+</main>
+<script id="recording" type="application/json">__OBJECTPILOT_TRACE__</script>
+<script>
+const recording=JSON.parse(document.getElementById('recording').textContent);
+const {summary,samples}=recording;
+const el=id=>document.getElementById(id),canvas=el('scene'),ctx=canvas.getContext('2d');
+const minX=Math.min(-3.2,...samples.map(s=>s.x))-.15,maxY=Math.max(.8,...samples.map(s=>Math.abs(s.y)))+.15;
+const px=x=>55+(x-minX)/(-minX)*835,py=y=>220-y/maxY*140;
+let index=0,playing=false,frame=null,last=null;
+el('identity').textContent=`${summary.controller} · seed ${summary.seed} · ${summary.randomized?'randomized':'nominal'} environment`;
+el('goal').textContent=`Desired stand-off: ${summary.config.stand_off_m.toFixed(2)} m`;
+el('minimum').textContent=`Minimum: ${summary.config.minimum_m.toFixed(2)} m`;
+el('outcome').textContent=summary.outcome;
+el('position').max=samples.length-1;
+function line(x1,y1,x2,y2,color,width=1,dash=[]){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore()}
+function text(value,x,y,color='#526580',align='left'){ctx.fillStyle=color;ctx.font='18px system-ui';ctx.textAlign=align;ctx.fillText(value,x,y)}
+function render(){
+ const s=samples[index];
+ el('position').value=index;el('position').setAttribute('aria-valuetext',`${s.t.toFixed(1)} seconds`);
+ el('time').textContent=`${s.t.toFixed(1)} / ${summary.time_s.toFixed(1)} s`;
+ el('clearance').textContent=`${(-s.x).toFixed(2)} m`;el('rc').textContent=s.rc.join(', ');
+ el('note').textContent=`Supervisor: ${s.supervisor.replaceAll('_',' ')}. Playback is a visualization of saved data.`;
+ canvas.setAttribute('aria-label',`${summary.controller} at ${s.t.toFixed(1)} seconds; wall clearance ${(-s.x).toFixed(2)} meters`);
+ ctx.clearRect(0,0,960,440);ctx.fillStyle='#f8faff';ctx.fillRect(0,0,960,440);
+ ctx.fillStyle='#fceae5';ctx.fillRect(px(-summary.config.minimum_m),65,px(0)-px(-summary.config.minimum_m),290);
+ for(let m=Math.ceil(minX);m<=0;m++){line(px(m),65,px(m),355,'#dde5f0');text(`${-m} m`,px(m),385,undefined,'center')}
+ for(const y of [-.5,0,.5])line(55,py(y),px(0),py(y),'#dde5f0');
+ line(px(-summary.config.stand_off_m),65,px(-summary.config.stand_off_m),355,'#167151',2,[7,6]);
+ line(px(-summary.config.minimum_m),65,px(-summary.config.minimum_m),355,'#a53a29',2,[3,5]);
+ line(px(0),65,px(0),355,'#526580',7);line(px(0),py(.15),px(0),py(-.15),'#1435ee',12);
+ text('TOP VIEW',25,35);text('Printed target',px(0),35,undefined,'right');text('Wall clearance →',470,425,undefined,'center');
+ ctx.beginPath();samples.slice(0,index+1).forEach((s,i)=>i?ctx.lineTo(px(s.x),py(s.y)):ctx.moveTo(px(s.x),py(s.y)));ctx.strokeStyle='#1435ee';ctx.lineWidth=3;ctx.stroke();
+ ctx.save();ctx.translate(px(s.x),py(s.y));ctx.rotate(-s.heading);ctx.beginPath();ctx.moveTo(17,0);ctx.lineTo(-12,-10);ctx.lineTo(-7,0);ctx.lineTo(-12,10);ctx.closePath();ctx.fillStyle='#1435ee';ctx.fill();ctx.restore();
+}
+function pause(){playing=false;cancelAnimationFrame(frame);last=null;el('play').textContent='Play';el('play').setAttribute('aria-pressed','false')}
+function tick(t){if(!playing)return;if(last===null)last=t;const steps=Math.floor((t-last)/(summary.config.dt*1000));if(steps>0){index=Math.min(samples.length-1,index+steps);last+=steps*summary.config.dt*1000;render();if(index===samples.length-1){pause();return}}frame=requestAnimationFrame(tick)}
+el('play').addEventListener('click',()=>{if(playing){pause();return}if(index===samples.length-1)index=0;playing=true;el('play').textContent='Pause';el('play').setAttribute('aria-pressed','true');render();frame=requestAnimationFrame(tick)});
+el('position').addEventListener('input',()=>{pause();index=Number(el('position').value);render()});
+el('reset').addEventListener('click',()=>{pause();index=0;render()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+render();
+</script></body></html>

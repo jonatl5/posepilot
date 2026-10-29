@@ -1,64 +1,50 @@
-# PosePilot task list
+# objectPilot tasks
 
-Work to do, grouped by area. Tick a box (`- [x]`) when it's done, and note the week on the [progress page](https://jonatl5.github.io/posepilot/log.html).
+Updated October 29, 2026. Printed-wall targets, fixed altitude, forward/yaw approach. Dates are Pacific Time. Earlier MediaPipe/person-following plans are superseded for active implementation.
 
-**Goal:** the RoboMaster TT recognizes an object (one of a few classes), flies up to it and hovers in front of it. Objects are stationary; daylight / indoor lighting only.
+## Completed preparation
 
-**Now** = can start before the RoboMaster TT arrives. **After TT** = needs the drone.
+- [x] Original planning and move to TT with laptop compute.
+- [x] Select wall prints for first demo; remove people/night operation from active scope.
+- [x] Python package, YOLO adapter, video/webcam dry runs, target confirmation and latest frame.
+- [x] Shared versioned 64-value state, PID/PPO supervisor, proximity/staleness/source checks.
+- [x] Seeded Gymnasium environment, PPO training/save/load and evaluation.
+- [x] Data extraction, group split, explicit reviewed labels and dataset preparation.
+- [x] Official ESP32 source inspection and range-age extension generator.
+- [x] Document collection procedure and observation/action contracts.
+- [x] Publish Rapid prototypes with recorded simulation and diagnostic episode data.
+- [x] Add an offline simulator demo, installation/run guide and no-hardware CI workflow.
 
-## Done
+## Before November 3
 
-- [x] Decide the initial project plan (week 1)
-- [x] Research components; switch to RoboMaster TT, laptop compute over Wi-Fi (week 2)
-- [x] Update the website and README for the new design
-- [x] Compare IR cameras ([research/ir-cameras.md](research/ir-cameras.md)), then drop night operation and the IR camera
-- [x] Switch the goal from following a person to approaching an object
+- [ ] A: review firmware, board toolchain and factory restoration; prepare bench procedure.
+- [ ] B: choose actual classes and prints; record grouped videos, annotate and benchmark.
+- [ ] B: fit per-print/per-camera visual scales using separate calibration samples.
+- [ ] C: tune PID and train at least three PPO seeds; select checkpoints on validation only.
+- [ ] C: expand independent range delay, burst loss and false-target scenarios beyond current randomization.
+- [ ] D: show detector dry run and synthetic closed loop separately, with measured timing and limits.
+- [ ] D: update the public progress log when real printed-target or hardware evidence becomes available.
 
-## 1. Object detection on a webcam — Now
+## November 4–7 arrival qualification
 
-Everything here carries over to the TT unchanged.
+- [ ] Activate and record TT/ESP32 versions; verify factory restore procedure.
+- [ ] Measure forward range against a tape; distinguish downward telemetry.
+- [ ] Compile generated firmware for the delivered board; verify custom query, validity, sequence and age.
+- [ ] If needed, qualify external sensor voltage, I2C address ownership, mount and weight.
+- [ ] Measure camera calibration, optical overlap, body offsets, stream and query latency.
+- [ ] Implement one flight dispatcher, command watchdog, battery/telemetry freshness and manual takeover.
+- [ ] Validate command signs, stop/land and link-loss behavior before autonomous flight.
+- [ ] Measure low-speed response, braking, drift and battery effects; update simulator.
 
-- [ ] Set up a Python environment (OpenCV, NumPy, a detector) and pin versions in `requirements.txt`
-- [ ] Pick a detector: Ultralytics YOLO (nano model, COCO classes) or MediaPipe Object Detector; check the license fits
-- [ ] Pick the target classes (e.g. backpack, bottle, chair) and test each on a laptop webcam
-- [ ] Compute box center errors `ex`, `ey` and size error `es` (box height vs. hover size); add EMA smoothing
-- [ ] Pick the target object when several are visible (highest confidence, or closest to center)
-- [ ] Add a latest-frame buffer and an observation-age timeout
-- [ ] Log per-frame timing: capture → detection → features
-- [ ] Measure box size vs. real distance for each class, to choose the hover size
+## Integration and final evaluation
 
-## 2. Drone control code — Now (write), After TT (test)
+- [ ] November 8–19: supervised PID printed-wall approach; TT-specific videos and detector validation.
+- [ ] Add bounded search/recovery only after clearance qualification; routes are not required.
+- [ ] November 10 noon: Peer Review 1.
+- [ ] November 20–December 3: tuned PID versus nominal/randomized PPO, shared held-out conditions.
+- [ ] If qualified, at least 10 paired flight trials/controller; report uncertainty and interventions.
+- [ ] December 3: feature freeze and choose most reliable demo controller.
+- [ ] December 4–9: rehearse; December 10: final demonstration.
+- [ ] December 15 noon: final report and Peer Review 2.
 
-- [ ] Pick a library: `djitellopy` or DJI's RoboMaster Python SDK
-- [ ] Write connect, video stream, `rc` command and land functions
-- [ ] Write the supervisor: speed limits, minimum distance, stale-frame hold, slow search turn when the object is lost, land on Wi-Fi loss, manual override key
-- [ ] Add a "dry run" mode that prints commands instead of sending them
-- [ ] After TT: test the video stream and measure Wi-Fi delay
-- [ ] After TT: run the detector on the TT stream and check accuracy at 720p
-- [ ] After TT: measure the response to `rc` commands (props off first, then hover)
-- [ ] After TT: measure real flight time
-
-## 3. Simulation + baseline — Now
-
-The longest piece of work on the roadmap.
-
-- [ ] Build a 2D Gymnasium environment: a stationary object, a drone with forward speed + yaw, random start position and heading
-- [ ] Output the same observation features as the real pipeline (section 1)
-- [ ] Add delay, box noise, missed detections and false detections
-- [ ] Reward reaching the hover spot (centered, right size) quickly and smoothly; penalize overshoot and getting too close
-- [ ] Write a PID controller and tune it in the simulator (baseline)
-- [ ] First PPO run with Stable-Baselines3 to check the setup works
-- [ ] Later: update delay / response numbers with real TT measurements
-
-## 4. Docs + planning — Now
-
-- [ ] Write the observation spec: feature list, order, units, normalization
-- [ ] Write the first-flight test plan: location, stop procedure, props-off checks
-- [ ] Decide where the code lives (this repo or a separate one)
-- [ ] Fill in each week on the progress page
-
-## Later stages (from the roadmap)
-
-- [ ] Weeks 7–8: train PPO with randomized start positions, delay and detection noise; compare with PID on held-out seeds
-- [ ] Weeks 9–10: connect the policy to `rc` commands, props-off integration tests
-- [ ] Weeks 11–12: slow fixed-altitude indoor flights to real objects; publish logs and results
+No autonomous flight, firmware flashing, real dataset collection or hardware results are marked complete.

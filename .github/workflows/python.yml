@@ -1,0 +1,52 @@
+name: Python pipeline
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'firmware/**'
+      - 'pyproject.toml'
+      - 'requirements-lock.txt'
+      - 'README.md'
+      - '.github/workflows/python.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'firmware/**'
+      - 'pyproject.toml'
+      - 'requirements-lock.txt'
+      - 'README.md'
+      - '.github/workflows/python.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install software dependencies
+        run: python -m pip install -e ".[vision,test]"
+      - name: Unit and environment tests
+        run: python -m pytest -q
+      - name: Offline demo and PPO save/load smoke test
+        run: |
+          python -m objectpilot.demo --out runs/ci_pid
+          python -m objectpilot.train --steps 1024 --seed 0 --out runs/ci_ppo
+          python -m objectpilot.evaluate --model runs/ci_ppo/policy.zip --episodes 3 --seed 20000 --out runs/ci_eval
+          python -m objectpilot.demo --model runs/ci_ppo/policy.zip --out runs/ci_ppo_demo
+      - name: Generate firmware from the reviewed upstream revision
+        run: |
+          git clone https://github.com/RoboMaster/RMTT_Libs.git artifacts/RMTT_Libs
+          git -C artifacts/RMTT_Libs checkout b8ece60ec31eeca3350209a2559f549864e91dce
+          python firmware/prepare_firmware.py --upstream artifacts/RMTT_Libs --out artifacts/firmware/objectpilot_default

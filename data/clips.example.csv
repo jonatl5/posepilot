@@ -1,0 +1,4 @@
+clip_id,path,group_id,split,print_id,room,device,target_class,lighting,trajectory,notes
+example_train,data/raw/example_train.mp4,roomA_day1_printSetA,train,bottle_A,roomA,phone,bottle,normal,approach,REPLACE with real clips
+example_val,data/raw/example_val.mp4,roomB_day2_printSetB,val,bottle_B,roomB,phone,bottle,side_light,yaw,REPLACE with real clips
+example_test,data/raw/example_test.mp4,roomC_day3_printSetC,test,bottle_C,roomC,phone,bottle,normal,occlusion,REPLACE with real clips

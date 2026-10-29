@@ -1,0 +1,29 @@
+# Pipeline contract v1
+
+`src/objectpilot/core.py` is the executable contract. Schema `objectpilot-v1-16x4` fixes order, scaling and history. Checkpoints record the entire Config; loader rejects mismatches. Default cycle is 10 Hz. Four chronological 16-value observations form a 64-value float32 vector. Initial history is zero padded. Scaling is fixed; no VecNormalize file.
+
+| Index | Feature | Encoding |
+|---|---|---|
+| 0, 1 | ex, ey | Normalized box center minus 0.5 |
+| 2 | log size error | log(d_visual / stand_off) / 2, clipped to ±1 |
+| 3 | visual distance | k / bbox height / 4 m, clipped 0–1 |
+| 4 | forward distance | ToF / 1.2 m; zero placeholder when unavailable |
+| 5 | forward valid | Correct source, valid finite range, fresh timestamp |
+| 6 | range associated | Both-axis box/optical-center overlap proxy plus center gates |
+| 7, 8 | confidence, detection valid | Confidence and validity mask |
+| 9, 10 | frame age, range age | Age / timeout, clipped 0–1; unavailable = 1 |
+| 11, 12 | ex rate, log size rate | Per-second derivatives / 2 and / 4; no repeated-frame differentiation |
+| 13, 14 | previous safe actions | Supervisor outputs, not raw policy requests |
+| 15 | near sensor required | Latched on near vision or valid forward ToF; reset per episode |
+
+PPO proposes `[forward, yaw]` in `[-1,1]^2`. The supervisor forbids reverse for the wall demo, clips yaw, limits action changes and rejects invalid data. Mapping: `rc 0 round(20*forward) 0 round(25*yaw)`. RC values are channel inputs, not m/s. Positive yaw turns toward a right-of-image target in simulation; verify the hardware sign. Aircraft stabilization holds altitude; no policy altitude channel.
+
+Implemented: target confirmation, centering, approach, near-sensor-required hold and simulated arrival. Automatic takeoff, room search, routes, recovery turns and a live command dispatcher remain explicit integration tasks. Replay with no target produces zero motion.
+
+Detection records carry normalized boxes, class, confidence, frame ID and timestamp. RangeSample carries meters or null, source, status, timestamp and optional sequence. All times must share a host monotonic clock, or one video timebase for replay. MCU millis cannot be compared directly with host time. Factory query receipt does not prove sample freshness.
+
+The environment generates synthetic Detection and RangeSample records; rendered rectangles do not validate YOLO. Only reward/info may use ground truth. Success requires fresh associated range and stable two-second hold. Success, minimum-distance violation, boundary exit or prolonged loss terminate; time limit truncates.
+
+Replay JSONL includes source timestamps, detections, range, observations, proposed/safe actions, RC values, reason and inference duration. Webcam timestamps mean host decode receipt, not exposure time. File replay follows video time and samples about 10 Hz; it is not real-time latency evidence.
+
+Starting assumptions: 0.65 m stand-off, 0.40 m minimum, 0.35 s image timeout, 0.40 s range timeout. Actual braking, body offsets, camera latency, independent range cadence, battery response and extrinsics need measurement. Both-axis overlap remains a proxy, not proof that a beam hit a 3D object. The first task is restricted to wall prints.
