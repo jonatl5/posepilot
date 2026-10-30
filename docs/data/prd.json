@@ -234,7 +234,7 @@
     ],
     [
       "Control-v2 audit",
-      "Official SDK and six public project/library references reviewed. Shared gate, target confirmation, RC quantization, configurable entrypoints and checkpoint checks implemented. New diagnostics are stored separately under docs/evidence/control-v2; older evidence remains unchanged."
+      "Official SDK and six public project/library references reviewed. Shared gate, target confirmation, RC quantization, configurable entrypoints and checkpoint checks implemented. New diagnostics are stored separately under docs/evidence/control-v2; older evidence remains unchanged. Windows and Linux CI each passed 46 tests without skips, including a nondefault-config PPO workflow and separate 1024-transition smoke run."
     ],
     [
       "Comparison boundary",

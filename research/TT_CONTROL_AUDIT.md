@@ -70,3 +70,7 @@ To evaluate PID under matched conditions, omit `--model`. Change calibration in 
 ## Remaining measured work
 
 The control code is aligned at the software interface. The simulator is still a planar command-response approximation: it does not validate aerodynamic motion, wall effects, video exposure delay or independent sensor cadence. Qualify delivered TT firmware, forward sensor orientation, camera intrinsics/visual scale, RC signs/gain/lag/braking, fresh range transport and operator takeover. Ground-only capture stays available; the command watchdog remains an injected-I/O scaffold, not an autonomous flight launcher. See [hardware gates](HARDWARE_GATES.md).
+
+## Completed validation
+
+[CI run 40978634314](https://github.com/jonatl5/posepilot/actions/runs/40978634314) passed on Windows and Linux: 46 tests per platform, zero skips; full dependency checks; nondefault-config PPO workflow; 1024-transition PPO smoke; English/PRD synchronization; firmware source generation. Code revision: `2b0bfe3`. Local macOS bench checks passed 43 tests with three optional RL checks skipped. New randomized PID diagnostics were 25/30 with five timeouts and zero minimum-distance violations. These are software/development results, not flight qualification.

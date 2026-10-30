@@ -84,5 +84,23 @@
     "No new production PPO checkpoint",
     "Simulator dynamics remain uncalibrated",
     "Do not pool old and control-v2 results"
-  ]
+  ],
+  "ci_result": {
+    "code_revision": "2b0bfe3fa3240fd7681ff2264e9367bccf917db3",
+    "url": "https://github.com/jonatl5/posepilot/actions/runs/40978634314",
+    "status": "success",
+    "ubuntu": {
+      "tests_passed": 46,
+      "tests_skipped": 0,
+      "job_id": 123812794187
+    },
+    "windows": {
+      "tests_passed": 46,
+      "tests_skipped": 0,
+      "job_id": 123812794424
+    },
+    "ppo_smoke": "1024 transitions, checkpoint save/load, evaluation and demo passed on both platforms",
+    "dependency_checks": "pip check and single standard OpenCV distribution passed on both platforms",
+    "firmware": "Source generation passed; no compilation or flash claimed"
+  }
 }

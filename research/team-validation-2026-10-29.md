@@ -1,5 +1,7 @@
 # Local validation record
 
+Archive note: the dependency snapshot originally called `requirements-lock.txt` is now preserved in [team-windows-requirements.txt](team-windows-requirements.txt). The results below predate control-v2; use the active package extras for new installations.
+
 Date: October 29, 2026. Host: Windows, Python 3.12.14, CPU. Dependency versions are in `requirements-lock.txt`. This is pre-hardware evidence only.
 
 | Check | Observed outcome |
