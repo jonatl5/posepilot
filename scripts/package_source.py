@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     names = {'.gitignore', 'LICENSE', 'README.md', 'TASKS.md', 'PRD.md', 'pyproject.toml',
-             'requirements-dev.txt', 'requirements-rl.txt', 'requirements-yolo.txt', 'requirements-lock.txt',
+             'requirements-dev.txt', 'requirements-rl.txt', 'requirements-yolo.txt',
              'data/clips.example.csv', 'scripts/check_repository.py', 'scripts/package_source.py'}
     for directory, extensions in {
         'src': {'.py', '.html'}, 'tests': {'.py'}, 'configs': {'.json'}, '.github': {'.yml'},

@@ -1,6 +1,6 @@
 # objectPilot Product Requirements
 
-Integrated repository edition · October 29, 2026
+TT control alignment edition · October 29, 2026
 
 Aligned with the team's October 29, 2026 Revision 2 PRD. [Source PRD](https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit).
 
@@ -13,6 +13,8 @@ Recognize a stationary printed object image on a wall, center it in the RoboMast
 The primary demonstration uses matte wall prints, normal indoor lighting and fixed altitude. Physical three-dimensional objects require a separate validation stage. The aircraft is still awaiting delivery; no real TT flight or sensor qualification is claimed.
 
 The repository now contains the team starter implementation and aligned additions. YOLO wall prints remain the demonstration target. ArUco/red-card inputs are bench fixtures using the same 64-value contract, PID/PPO interface and supervisor.
+
+A follow-up audit of both contributors and public TT/Tello projects aligns simulation and camera replay under objectpilot-control-v2. Observation layout remains 16 x 4; old PPO checkpoints require retraining.
 
 | Area | Requirement |
 | --- | --- |
@@ -47,7 +49,7 @@ Priority: Must.
 
 Three fresh-frame confirmation, same-class association and explicit loss; reject silent identity switches.
 
-Current evidence: Three-frame same-class target confirmation retained; real distractor tests pending.
+Current evidence: Three-frame target confirmation shared by simulator and camera replay; real distractor tests pending.
 
 ### F4 · State
 
@@ -55,7 +57,7 @@ Priority: Must.
 
 One versioned 16-feature schema and four-tick history shared by simulation, replay and deployment.
 
-Current evidence: Canonical 16 x 4 contract retained across simulation and camera pipeline; incompatible commands rejected.
+Current evidence: One 16 x 4 observation schema plus explicit control-v2 behavior version; feature/action order and actual policy tensor spaces checked.
 
 ### F5 · Policy
 
@@ -63,7 +65,7 @@ Priority: Must.
 
 Deterministic PPO inference on the laptop; save model, config, scaling, schema and seed together.
 
-Current evidence: Initial offline training/evaluation completed; flight deployment pending.
+Current evidence: Shared JSON config accepted by train/evaluate/demo/replay; old behavior checkpoints rejected; new qualification pending.
 
 ### F6 · Baseline
 
@@ -79,7 +81,7 @@ Priority: Must.
 
 Two channels, forward and yaw; zero lateral/throttle in the initial design. RC values require response calibration.
 
-Current evidence: One forward/yaw mapping with zero lateral/vertical outputs; physical response calibration pending.
+Current evidence: Same integer RC mapping and cap response in simulator and camera output; physical response calibration pending.
 
 ### F8 · Arrival
 
@@ -87,7 +89,7 @@ Priority: Must.
 
 Fresh associated ToF, centering/range tolerances and two-second hold; then terminate the approach and maintain hover.
 
-Current evidence: Measured two-second arrival hold integrated in replay; physical drift and wall arrival unverified.
+Current evidence: One measured arrival/zero-output gate in simulation and replay; simulator truth separately audits physical success.
 
 ### F9 · Supervisor
 
@@ -219,6 +221,7 @@ Current evidence: Team grouped-data tools retained; collection, label validation
 | --- | --- |
 | Original team diagnostics | 15 reported automated checks; 30 scenarios, seeds 10000–10029. Initial PID 30/30, PPO at 100,352 transitions 14/30, PPO at 8,192 transitions 0/30. Published results and trace are preserved verbatim. |
 | Integrated implementation | Integrated on top of the teammate source publication at 50d18b8. The offline demo, template, tests and CI are retained. Shared 64-value camera pipeline, marker bench inputs, grounded video/range capture, measured arrival and dispatcher fault checks added; 33 local tests pass, one optional SB3 check skipped. See the dated integration validation record. |
+| Control-v2 audit | Official SDK and six public project/library references reviewed. Shared gate, target confirmation, RC quantization, configurable entrypoints and checkpoint checks implemented. New diagnostics are stored separately under docs/evidence/control-v2; older evidence remains unchanged. |
 | Comparison boundary | The earlier local 11-input marker controller is superseded, not deployed. Its 50-scenario score and 52-test suite are not evidence for this integrated implementation. |
 | Hardware evidence | No TT flight, real printed-target accuracy, sensor cadence, firmware compilation/flashing or qualified braking margin is established. The dispatcher is tested with fake I/O only. |
 
@@ -232,6 +235,8 @@ Current evidence: Team grouped-data tools retained; collection, label validation
 - Start with 100 held-out simulated episodes per training seed. Aim for at least ten paired hardware trials per controller after hardware gates pass; report actual sample size, failures and interventions.
 
 - Report success with Wilson intervals, measured wall-distance and image-center error, arrival time with failure outcomes, command changes, overshoot and minimum clearance. Do not claim a speed winner by dropping PPO failures.
+
+- Use identical resolved JSON Config and control-contract version across training and evaluation. A measured arrival that fails the simulator truth audit is arrival_unverified, not success. Preserve older behavior results separately; do not relabel or pool them.
 
 | Gate | Completion evidence required |
 | --- | --- |

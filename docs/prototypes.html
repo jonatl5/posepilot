@@ -19,6 +19,7 @@
 <div class="section-wrap evidence-strip" aria-label="Shared implementation contract">
 <div><strong>64 inputs</strong><span>16 features across four ticks</span></div><div><strong>10 Hz</strong><span>Initial control cadence</span></div><div><strong>2 channels</strong><span>Forward and yaw only</span></div><div><strong>0 flights</strong><span>No hardware outcome claimed</span></div>
 </div>
+<section class="section-wrap prototype-section" id="tt-audit"><div class="section-heading"><div><div class="eyebrow">NEW / TT CONTROL ALIGNMENT</div><h2>Training and camera control, reconciled.</h2></div><p>Shared target confirmation, arrival gate, RC quantization and calibration config. Old PPO checkpoints require retraining under control-v2.</p></div><div class="inline-links"><a href="./alignment.html">Read the audit and new evidence ↗</a><a href="./evidence/control-v2/demo/demo.html">Play the current PID recording ↗</a></div></section>
 <section class="section-wrap prototype-section" id="perception">
 <div class="section-heading"><div><div class="eyebrow">01 / SHARED PERCEPTION INTERFACE</div><h2>Different bench inputs.<br>The same state builder.</h2></div><p>Markers are test fixtures for the wall-approach pipeline. They do not replace the printed-object demonstration.</p></div>
 <div class="artifact-layout"><figure class="artifact-shot"><img src="./assets/aruco-reference.png" alt="Actual OpenCV detection of a generated ArUco marker, mapped into the shared 64-value observation" width="640" height="480"><figcaption>Generated image processed by the actual detector and shared controller. This is software evidence, not a photograph or drone camera recording.</figcaption></figure>
@@ -51,7 +52,7 @@ python -m objectpilot.replay --source synthetic \
 <tr><td>Command supervision</td><td>Independent age/heartbeat watchdog scaffold with fake I/O tests</td><td>Qualified sink, operator controls and onboard link-loss behavior</td></tr>
 <tr><td>Data workflow</td><td>Collection, reviewed labels, grouped splits, calibration and evaluation tools</td><td>Real printed-target dataset and measured detector quality</td></tr>
 </tbody></table></div>
-<div class="inline-links"><a href="./evidence/integration/validation.json">Integration verification record</a><a href="./evidence/integration/demo-pid.html">Play the offline PID demo ↗</a><a href="./#results">Original team diagnostics</a><a href="https://github.com/jonatl5/posepilot/blob/main/research/ALIGNMENT.md">Route comparison and provenance ↗</a></div>
+<div class="inline-links"><a href="./evidence/integration/validation.json">Integration verification record</a><a href="./evidence/integration/demo-pid.html">Play the historical integration demo ↗</a><a href="./#results">Original team diagnostics</a><a href="https://github.com/jonatl5/posepilot/blob/main/research/ALIGNMENT.md">Route comparison and provenance ↗</a></div>
 <pre class="run-command"><code>python -m pytest -q
 python -m objectpilot.evaluate --episodes 30 \
   --seed 20000 --out runs/pid-integration</code></pre>

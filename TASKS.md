@@ -36,3 +36,12 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [ ] Select the most reliable qualified configuration at feature freeze.
 - [ ] Preserve model/configuration, calibration, validation/test splits, logs and limitations.
 - [ ] Keep dated evidence, progress pages and PRD statuses aligned after each implementation change.
+
+## TT control alignment audit
+
+- [x] Compare official TT SDK and public TT/Tello projects with our detection/action contract.
+- [x] Reconcile both contributors: shared target confirmation, measured arrival gate, RC quantization and calibration config.
+- [x] Version controller behavior and reject incompatible PPO checkpoints.
+- [x] Retire the conflicting root dependency snapshot; retain the original under research.
+- [x] Add cross-path regression tests and Windows/Linux CI with resolved environment artifacts.
+- [ ] Retrain multiple PPO seeds under control-v2 and qualify actual TT response.

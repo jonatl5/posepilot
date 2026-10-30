@@ -1,7 +1,6 @@
 import argparse
 import json
 import subprocess
-from dataclasses import asdict
 from pathlib import Path
 from importlib.metadata import version
 import torch
@@ -9,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import DummyVecEnv
 from .env import ApproachEnv
-from .core import Config, SCHEMA, FEATURE_NAMES
+from .core import Config, policy_contract
 
 def main():
     p = argparse.ArgumentParser()
@@ -17,14 +16,15 @@ def main():
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--envs", type=int, default=4)
     p.add_argument("--nominal", action="store_true")
+    p.add_argument("--config", help="JSON Config shared with evaluation and camera replay")
     p.add_argument("--out", default="runs/ppo")
     args = p.parse_args()
     if args.steps <= 0 or args.envs <= 0: p.error("steps and envs must be positive")
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=False)
     torch.set_num_threads(1)
-    c = Config()
-    check_env(ApproachEnv(c), warn=True)
+    c = Config.from_json(args.config) if args.config else Config()
+    check_env(ApproachEnv(c, randomized=not args.nominal), warn=True)
     env = DummyVecEnv([lambda: ApproachEnv(c, randomized=not args.nominal) for _ in range(args.envs)])
     env.seed(args.seed)
     model = PPO("MlpPolicy", env, seed=args.seed, device="cpu", n_steps=256,
@@ -33,7 +33,7 @@ def main():
     model.learn(total_timesteps=args.steps)
     model.save(out/"policy")
     revision = subprocess.run(["git","rev-parse","HEAD"],capture_output=True,text=True)
-    metadata = {"schema":SCHEMA, "features":FEATURE_NAMES, "config":asdict(c),
+    metadata = {**policy_contract(c),
                 "seed":args.seed, "requested_steps":args.steps, "actual_steps":model.num_timesteps,
                 "randomized":not args.nominal, "normalization":"fixed scaling in core.py; no VecNormalize",
                 "git_base":revision.stdout.strip(), "status":"simulation candidate only",

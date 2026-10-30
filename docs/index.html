@@ -60,14 +60,14 @@
       </div>
 
       <div class="architecture-details">
-        <article><span class="detail-index">+</span><h3>One aligned implementation</h3><p>The team starter code is now included in the repository. Grounded camera capture, ArUco/red bench inputs, measured arrival and dispatcher fault checks all use the same 64-value wall-approach contract.</p><a href="./prototypes.html">Explore and download the integrated source ↗</a></article>
+        <article><span class="detail-index">+</span><h3>TT control alignment audit</h3><p>Official TT SDK and public projects checked against both contributors. Simulation and camera replay now share target confirmation, measured arrival, integer RC mapping and calibration config.</p><a href="./alignment.html">Inspect the audit and current evidence ↗</a></article>
         <article><span class="detail-index">→</span><h3>Requirements, kept with the code</h3><p>The English repository PRD now records 18 functional requirements, the primary 64-value policy contract, acceptance gates and implementation status and remaining hardware work. The website and Markdown edition are generated from one source.</p><a href="./prd.html">Read the public PRD ↗</a></article>
       </div>
 
       <div class="rollout-panel" id="simulation">
         <div class="rollout-heading"><div><div class="eyebrow">RECORDED PYTHON SIMULATOR OUTPUT</div><h3>Same start. Two controllers.</h3></div><p>Seed 10000, the first diagnostic scenario. Switch controllers or scrub through their recorded trajectories.</p></div>
         <div class="rollout-layout">
-          <figure class="rollout-figure"><canvas id="rollout-canvas" width="800" height="440" role="img" aria-label="Top-down replay of a drone approaching a printed target on a wall, with desired stand-off and minimum clearance marked."></canvas><div class="rollout-legend"><span>Stand-off: 0.65 m</span><span>Minimum: 0.40 m</span></div><figcaption>A simulated trajectory recorded from the Python environment. This is not flight footage and the browser does not run PPO.</figcaption></figure>
+          <figure class="rollout-figure"><canvas id="rollout-canvas" width="800" height="440" role="img" aria-label="Top-down replay of a drone approaching a printed target on a wall, with desired stand-off and minimum clearance marked."></canvas><div class="rollout-legend"><span>Stand-off: 0.65 m</span><span>Minimum: 0.40 m</span></div><figcaption>Historical trajectory recorded before the control-v2 audit. This is not flight footage and the browser does not run PPO.</figcaption></figure>
           <div class="rollout-controls">
             <label for="controller-select">Controller<select id="controller-select"><option value="pid">PID starting gains</option><option value="ppo">PPO · 100,352 steps</option></select></label>
             <dl class="rollout-readings"><div><dt>Elapsed</dt><dd id="rollout-time">—</dd></div><div><dt>Wall clearance</dt><dd id="rollout-distance">—</dd></div><div><dt>Forward / yaw</dt><dd id="rollout-action">—</dd></div><div><dt>Episode outcome</dt><dd id="rollout-outcome">—</dd></div></dl>

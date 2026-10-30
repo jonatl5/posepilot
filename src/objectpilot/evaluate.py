@@ -3,25 +3,33 @@ import csv
 import json
 import math
 from pathlib import Path
-from dataclasses import asdict
 import numpy as np
-from .core import Config, PID, SCHEMA
+from .core import Config, PID, policy_contract
 from .env import ApproachEnv
 
 def load_policy(path, config=None):
-    from stable_baselines3 import PPO
     path = Path(path)
     meta = json.loads((path.parent/"metadata.json").read_text(encoding="utf-8"))
-    if meta["schema"] != SCHEMA or meta["config"] != asdict(config or Config()):
-        raise ValueError("Policy schema/config mismatch; regenerate with the deployment configuration")
-    return PPO.load(path, device="cpu")
+    c = config or Config()
+    for key, value in policy_contract(c).items():
+        if meta.get(key) != value:
+            raise ValueError(f"Policy {key} mismatch; retrain with the current deployment contract/config")
+    from stable_baselines3 import PPO
+    from gymnasium.spaces import Box
+    model = PPO.load(path, device="cpu")
+    for space, shape in ((model.observation_space, (16*c.history,)), (model.action_space, (2,))):
+        if (not isinstance(space, Box) or space.shape != shape or space.dtype != np.float32
+                or not np.all(space.low == -1) or not np.all(space.high == 1)):
+            raise ValueError("Policy tensor spaces do not match the current contract")
+    return model
 
-def benchmark(episodes, seed, model=None, randomized=True):
+def benchmark(episodes, seed, model=None, randomized=True, config=None):
+    c = config or Config()
     rows = []
     for i in range(episodes):
-        env = ApproachEnv(randomized=randomized)
+        env = ApproachEnv(c, randomized=randomized)
         obs, info = env.reset(seed=seed+i)
-        baseline = PID()
+        baseline = PID(c)
         changes, errors, minimum = [], [], 100.
         while True:
             action = baseline.predict(obs) if model is None else model.predict(obs,deterministic=True)[0]
@@ -31,7 +39,9 @@ def benchmark(episodes, seed, model=None, randomized=True):
             errors.append(abs(info["center_error"]))
             if term or trunc: break
         rows.append({"seed":seed+i, "success":info["success"], "outcome":info["outcome"],
-                     "time_s":info["time_s"], "final_distance_error_m":abs(info["wall_clearance_m"]-.65),
+                     "time_s":info["time_s"], "final_clearance_m":info["wall_clearance_m"],
+                     "final_distance_error_m":abs(info["wall_clearance_m"]-c.stand_off_m),
+                     "measured_arrival":info["measured_arrival"], "truth_verified":info["truth_verified"],
                      "mean_center_error":float(np.mean(errors)), "mean_action_delta_sq":float(np.mean(changes)),
                      "minimum_clearance_m":minimum})
         env.close()
@@ -56,17 +66,19 @@ def main():
     p.add_argument("--episodes",type=int,default=100)
     p.add_argument("--seed",type=int,default=10000)
     p.add_argument("--nominal",action="store_true")
+    p.add_argument("--config", help="JSON Config; must match training and replay")
     p.add_argument("--out",default="runs/evaluation")
     a = p.parse_args()
     if a.episodes < 1: p.error("episodes must be positive")
     out = Path(a.out)
     out.mkdir(parents=True,exist_ok=False)
-    model = load_policy(a.model) if a.model else None
-    rows = benchmark(a.episodes,a.seed,model,not a.nominal)
+    c = Config.from_json(a.config) if a.config else Config()
+    model = load_policy(a.model, c) if a.model else None
+    rows = benchmark(a.episodes,a.seed,model,not a.nominal,c)
     with (out/"episodes.csv").open("w",newline="",encoding="utf-8") as f:
         w = csv.DictWriter(f,fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)
     summary = summarize(rows)
-    summary.update(controller="PPO" if model else "untuned PID starting gains",seed_start=a.seed,
+    summary.update(**policy_contract(c), controller="PPO" if model else "untuned PID starting gains",seed_start=a.seed,
                    randomized=not a.nominal,model=a.model)
     (out/"summary.json").write_text(json.dumps(summary,indent=2),encoding="utf-8")
     print(json.dumps(summary,indent=2))

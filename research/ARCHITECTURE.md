@@ -52,7 +52,7 @@ There is no reverse, lateral or vertical policy action. RC values are channel in
 
 ## One policy interface
 
-`core.py` defines `objectpilot-v1-16x4`: 16 fixed-scale features stacked across four chronological control ticks, with zero-padded initial history. `interfaces.md` lists exact indices. Simulator, replay, marker adapters and the future dispatcher use this contract. Checkpoint loading verifies the schema and complete Config. The earlier 11-input reference environment is not deployed.
+`core.py` defines `objectpilot-v1-16x4`: 16 fixed-scale features stacked across four chronological control ticks, with zero-padded initial history. `interfaces.md` lists exact indices. Simulator, replay, marker adapters and the future dispatcher use this contract. Checkpoint loading verifies schema, behavior version, ordered features, action names, complete Config and actual tensor spaces. `objectpilot-control-v2` adds identical target confirmation and `ControlGate` behavior to simulation and replay, including zero commands during arrival hold. Simulator truth only audits terminal physical success. Integer RC quantization and cap changes also affect simulated dynamics. Old checkpoints must be retrained; see [the TT audit](TT_CONTROL_AUDIT.md). The earlier 11-input reference environment is not deployed.
 
 ## Timing, video and future flight dispatch
 

@@ -1,12 +1,13 @@
 {
   "title": "objectPilot Product Requirements",
-  "edition": "Integrated repository edition \u00b7 October 29, 2026",
+  "edition": "TT control alignment edition · October 29, 2026",
   "source_url": "https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit",
   "source_revision": "Aligned with the team's October 29, 2026 Revision 2 PRD",
   "overview": [
     "Recognize a stationary printed object image on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A laptop runs YOLO11n, a PID baseline or PPO policy, and an independent supervisor. The ESP32 expansion supplies forward infrared time-of-flight measurements.",
     "The primary demonstration uses matte wall prints, normal indoor lighting and fixed altitude. Physical three-dimensional objects require a separate validation stage. The aircraft is still awaiting delivery; no real TT flight or sensor qualification is claimed.",
-    "The repository now contains the team starter implementation and aligned additions. YOLO wall prints remain the demonstration target. ArUco/red-card inputs are bench fixtures using the same 64-value contract, PID/PPO interface and supervisor."
+    "The repository now contains the team starter implementation and aligned additions. YOLO wall prints remain the demonstration target. ArUco/red-card inputs are bench fixtures using the same 64-value contract, PID/PPO interface and supervisor.",
+    "A follow-up audit of both contributors and public TT/Tello projects aligns simulation and camera replay under objectpilot-control-v2. Observation layout remains 16 x 4; old PPO checkpoints require retraining."
   ],
   "scope": [
     [
@@ -50,21 +51,21 @@
       "area": "Selection",
       "requirement": "Three fresh-frame confirmation, same-class association and explicit loss; reject silent identity switches.",
       "priority": "Must",
-      "status": "Three-frame same-class target confirmation retained; real distractor tests pending"
+      "status": "Three-frame target confirmation shared by simulator and camera replay; real distractor tests pending"
     },
     {
       "id": "F4",
       "area": "State",
       "requirement": "One versioned 16-feature schema and four-tick history shared by simulation, replay and deployment.",
       "priority": "Must",
-      "status": "Canonical 16 x 4 contract retained across simulation and camera pipeline; incompatible commands rejected"
+      "status": "One 16 x 4 observation schema plus explicit control-v2 behavior version; feature/action order and actual policy tensor spaces checked"
     },
     {
       "id": "F5",
       "area": "Policy",
       "requirement": "Deterministic PPO inference on the laptop; save model, config, scaling, schema and seed together.",
       "priority": "Must",
-      "status": "Initial offline training/evaluation completed; flight deployment pending"
+      "status": "Shared JSON config accepted by train/evaluate/demo/replay; old behavior checkpoints rejected; new qualification pending"
     },
     {
       "id": "F6",
@@ -78,14 +79,14 @@
       "area": "Control",
       "requirement": "Two channels, forward and yaw; zero lateral/throttle in the initial design. RC values require response calibration.",
       "priority": "Must",
-      "status": "One forward/yaw mapping with zero lateral/vertical outputs; physical response calibration pending"
+      "status": "Same integer RC mapping and cap response in simulator and camera output; physical response calibration pending"
     },
     {
       "id": "F8",
       "area": "Arrival",
       "requirement": "Fresh associated ToF, centering/range tolerances and two-second hold; then terminate the approach and maintain hover.",
       "priority": "Must",
-      "status": "Measured two-second arrival hold integrated in replay; physical drift and wall arrival unverified"
+      "status": "One measured arrival/zero-output gate in simulation and replay; simulator truth separately audits physical success"
     },
     {
       "id": "F9",
@@ -190,19 +191,19 @@
   ],
   "schema": [
     [
-      "0\u20133",
+      "0–3",
       "Horizontal/vertical center error, scaled log visual-distance error and calibrated visual range."
     ],
     [
-      "4\u20138",
+      "4–8",
       "Forward range, forward-valid flag, association flag, detector confidence and detection-valid flag."
     ],
     [
-      "9\u201312",
+      "9–12",
       "Frame age, range age, center-error rate and log-size rate."
     ],
     [
-      "13\u201315",
+      "13–15",
       "Previous supervised forward/yaw actions and a latched near-range requirement."
     ],
     [
@@ -225,11 +226,15 @@
   "evidence": [
     [
       "Original team diagnostics",
-      "15 reported automated checks; 30 scenarios, seeds 10000\u201310029. Initial PID 30/30, PPO at 100,352 transitions 14/30, PPO at 8,192 transitions 0/30. Published results and trace are preserved verbatim."
+      "15 reported automated checks; 30 scenarios, seeds 10000–10029. Initial PID 30/30, PPO at 100,352 transitions 14/30, PPO at 8,192 transitions 0/30. Published results and trace are preserved verbatim."
     ],
     [
       "Integrated implementation",
       "Integrated on top of the teammate source publication at 50d18b8. The offline demo, template, tests and CI are retained. Shared 64-value camera pipeline, marker bench inputs, grounded video/range capture, measured arrival and dispatcher fault checks added; 33 local tests pass, one optional SB3 check skipped. See the dated integration validation record."
+    ],
+    [
+      "Control-v2 audit",
+      "Official SDK and six public project/library references reviewed. Shared gate, target confirmation, RC quantization, configurable entrypoints and checkpoint checks implemented. New diagnostics are stored separately under docs/evidence/control-v2; older evidence remains unchanged."
     ],
     [
       "Comparison boundary",
@@ -244,31 +249,32 @@
     "Retain PID as the demonstration baseline unless a qualified alternative is more reliable. Compare tuned PID, nominal PPO and randomized PPO with identical detector settings, action caps and supervisor.",
     "Train at least three PPO seeds. Select checkpoints and gains using validation only, then freeze them. The 30 already-inspected diagnostic seeds are development data; use new held-out scenarios for the final comparison.",
     "Start with 100 held-out simulated episodes per training seed. Aim for at least ten paired hardware trials per controller after hardware gates pass; report actual sample size, failures and interventions.",
-    "Report success with Wilson intervals, measured wall-distance and image-center error, arrival time with failure outcomes, command changes, overshoot and minimum clearance. Do not claim a speed winner by dropping PPO failures."
+    "Report success with Wilson intervals, measured wall-distance and image-center error, arrival time with failure outcomes, command changes, overshoot and minimum clearance. Do not claim a speed winner by dropping PPO failures.",
+    "Use identical resolved JSON Config and control-contract version across training and evaluation. A measured arrival that fails the simulator truth audit is arrival_unverified, not success. Preserve older behavior results separately; do not relabel or pool them."
   ],
   "gates": [
     [
-      "G1 \u00b7 Perception bench",
+      "G1 · Perception bench",
       "Benchmark real wall prints, distractors and negatives; verify calibration and record timing distributions."
     ],
     [
-      "G2 \u00b7 Platform and sensing",
+      "G2 · Platform and sensing",
       "Identify firmware/board, verify query routing, sample freshness and camera/ToF geometry against measured distances."
     ],
     [
-      "G3 \u00b7 Flight dispatch",
+      "G3 · Flight dispatch",
       "Qualify a single dispatcher, operator takeover, independent command-age watchdog, battery/telemetry handling and onboard link-loss behavior."
     ],
     [
-      "G4 \u00b7 Conservative PID flight",
+      "G4 · Conservative PID flight",
       "Measure command response, stopping drift and sensor-to-propeller offset; demonstrate repeated supervised approaches within the qualified envelope."
     ],
     [
-      "G5 \u00b7 Policy comparison",
+      "G5 · Policy comparison",
       "Update simulation from measurements; validate multiple seeds and held-out conditions before any policy flight."
     ],
     [
-      "G6 \u00b7 Demonstration freeze",
+      "G6 · Demonstration freeze",
       "Select the most reliable validated configuration and preserve its model/configuration, evidence and known limitations."
     ]
   ],
@@ -278,24 +284,24 @@
       "Rapid prototypes: separate synthetic-control and camera-only evidence."
     ],
     [
-      "Oct 30\u2013Nov 3",
+      "Oct 30–Nov 3",
       "Printed-target collection, detector benchmark and November 3 status presentation."
     ],
     [
-      "Nov 4\u20137",
+      "Nov 4–7",
       "Approximate delivery, platform bring-up, camera/range tests and measured response. Arrival remains subject to confirmation."
     ],
     [
-      "Nov 8\u201319",
+      "Nov 8–19",
       "Supervised PID trials and repeatability; Peer Review 1 due November 10 at noon Pacific."
     ],
     [
-      "Nov 20\u2013Dec 3",
+      "Nov 20–Dec 3",
       "Calibrated controller comparison; feature freeze December 3."
     ],
     [
-      "Dec 4\u201315",
-      "Rehearse December 4\u20139; demonstration December 10; final report and Peer Review 2 December 15 at noon Pacific."
+      "Dec 4–15",
+      "Rehearse December 4–9; demonstration December 10; final report and Peer Review 2 December 15 at noon Pacific."
     ]
   ],
   "risks": [

@@ -67,7 +67,7 @@ def main(argv=None):
     try:
         if a.source == "tello":
             from .ground_link import GroundLink
-            link = GroundLink(a.host)
+            link = GroundLink(a.host, config=c)
             link.connect(a.range_mode)
         if live:
             video = LatestVideo(a.source, a.detector, a.marker_id).start()

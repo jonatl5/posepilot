@@ -28,7 +28,7 @@ const recording=JSON.parse(document.getElementById('recording').textContent);
 const {summary,samples}=recording;
 const el=id=>document.getElementById(id),canvas=el('scene'),ctx=canvas.getContext('2d');
 const minX=Math.min(-3.2,...samples.map(s=>s.x))-.15,maxY=Math.max(.8,...samples.map(s=>Math.abs(s.y)))+.15;
-const px=x=>55+(x-minX)/(-minX)*835,py=y=>220-y/maxY*140;
+const px=x=>55+(x-minX)/(-minX)*835,py=y=>220+y/maxY*140;
 let index=0,playing=false,frame=null,last=null;
 el('identity').textContent=`${summary.controller} · seed ${summary.seed} · ${summary.randomized?'randomized':'nominal'} environment`;
 el('goal').textContent=`Desired stand-off: ${summary.config.stand_off_m.toFixed(2)} m`;
@@ -53,7 +53,7 @@ function render(){
  line(px(0),65,px(0),355,'#526580',7);line(px(0),py(.15),px(0),py(-.15),'#1435ee',12);
  text('TOP VIEW',25,35);text('Printed target',px(0),35,undefined,'right');text('Wall clearance →',470,425,undefined,'center');
  ctx.beginPath();samples.slice(0,index+1).forEach((s,i)=>i?ctx.lineTo(px(s.x),py(s.y)):ctx.moveTo(px(s.x),py(s.y)));ctx.strokeStyle='#1435ee';ctx.lineWidth=3;ctx.stroke();
- ctx.save();ctx.translate(px(s.x),py(s.y));ctx.rotate(-s.heading);ctx.beginPath();ctx.moveTo(17,0);ctx.lineTo(-12,-10);ctx.lineTo(-7,0);ctx.lineTo(-12,10);ctx.closePath();ctx.fillStyle='#1435ee';ctx.fill();ctx.restore();
+ ctx.save();ctx.translate(px(s.x),py(s.y));ctx.rotate(s.heading);ctx.beginPath();ctx.moveTo(17,0);ctx.lineTo(-12,-10);ctx.lineTo(-7,0);ctx.lineTo(-12,10);ctx.closePath();ctx.fillStyle='#1435ee';ctx.fill();ctx.restore();
 }
 function pause(){playing=false;cancelAnimationFrame(frame);last=null;el('play').textContent='Play';el('play').setAttribute('aria-pressed','false')}
 function tick(t){if(!playing)return;if(last===null)last=t;const steps=Math.floor((t-last)/(summary.config.dt*1000));if(steps>0){index=Math.min(samples.length-1,index+steps);last+=steps*summary.config.dt*1000;render();if(index===samples.length-1){pause();return}}frame=requestAnimationFrame(tick)}

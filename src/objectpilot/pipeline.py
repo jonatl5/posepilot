@@ -2,7 +2,7 @@
 from dataclasses import asdict
 import math
 import numpy as np
-from .core import Config, FeatureBuilder, PID, Supervisor, latest, rc_channels, SCHEMA
+from .core import Config, FeatureBuilder, PID, Supervisor, latest, rc_channels, SCHEMA, CONTROL_CONTRACT
 
 
 class ArrivalMonitor:
@@ -33,25 +33,15 @@ class ArrivalMonitor:
         return in_window, self.arrived
 
 
-class ApproachPipeline:
-    """Inputs use the team's full-frame coordinates and 16 x 4 state contract."""
+class ControlGate:
+    """Identical post-policy supervision and arrival behavior in sim and replay."""
 
-    def __init__(self, config=None, policy=None):
+    def __init__(self, config=None):
         self.c = config or Config()
-        self.policy = policy
-        self.reset()
-
-    def reset(self):
-        self.builder = FeatureBuilder(self.c)
         self.supervisor = Supervisor(self.c)
-        self.pid = PID(self.c)
         self.arrival = ArrivalMonitor(self.c)
-        self.previous = np.zeros(2, dtype=np.float32)
 
-    def step(self, detection, ranging, now, **supervisor_flags):
-        obs = self.builder.build(detection, ranging, now, self.previous)
-        proposed = (self.pid.predict(obs) if self.policy is None
-                    else self.policy.predict(obs, deterministic=True)[0])
+    def apply(self, proposed, obs, now, ranging=None, **supervisor_flags):
         safe, reason = self.supervisor.apply(proposed, obs, **supervisor_flags)
         # A recently received close stock reply can veto motion, but cannot
         # authorize approach or arrival because its sample age is unknown.
@@ -75,9 +65,33 @@ class ApproachPipeline:
         if self.arrival.arrived:
             safe[:] = 0
             reason = "arrived"
-        self.previous = safe.copy()
         self.supervisor.previous = safe.copy()
-        return {"schema": SCHEMA, "config": asdict(self.c), "mode": "dry_run",
+        return safe, reason
+
+
+class ApproachPipeline:
+    """Inputs are selected detections, in full-frame normalized coordinates."""
+
+    def __init__(self, config=None, policy=None):
+        self.c = config or Config()
+        self.policy = policy
+        self.reset()
+
+    def reset(self):
+        self.builder = FeatureBuilder(self.c)
+        self.gate = ControlGate(self.c)
+        self.supervisor, self.arrival = self.gate.supervisor, self.gate.arrival
+        self.pid = PID(self.c)
+        self.previous = np.zeros(2, dtype=np.float32)
+
+    def step(self, detection, ranging, now, **supervisor_flags):
+        obs = self.builder.build(detection, ranging, now, self.previous)
+        proposed = (self.pid.predict(obs) if self.policy is None
+                    else self.policy.predict(obs, deterministic=True)[0])
+        safe, reason = self.gate.apply(proposed, obs, now, ranging, **supervisor_flags)
+        self.previous = safe.copy()
+        return {"schema": SCHEMA, "control_contract": CONTROL_CONTRACT,
+                "config": asdict(self.c), "mode": "dry_run",
                 "timestamp": now, "detection": asdict(detection) if detection else None,
                 "forward_range": asdict(ranging) if ranging else None,
                 "observation": obs.tolist(), "proposed_action": np.asarray(proposed).tolist(),

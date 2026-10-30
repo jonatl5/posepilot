@@ -8,7 +8,7 @@ from .core import CustomRangeParser, RangeSample, parse_ext_tof
 class GroundLink:
     ALLOWED = frozenset(("command", "streamon", "streamoff", "EXT tof?", "EXT oprange?", "EXT version?"))
 
-    def __init__(self, host="192.168.10.1", local_port=8889):
+    def __init__(self, host="192.168.10.1", local_port=8889, config=None):
         self.host = socket.gethostbyname(host)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
@@ -18,7 +18,7 @@ class GroundLink:
             raise
         self.lock = threading.Lock()
         self.stop = threading.Event()
-        self.parser = CustomRangeParser()
+        self.parser = CustomRangeParser(config)
         self.range_sample = None
         self.worker = None
         self.streaming = False

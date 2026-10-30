@@ -1,0 +1,88 @@
+{
+  "schema": "objectpilot-v1-16x4",
+  "control_contract": "objectpilot-control-v2",
+  "features": [
+    "ex",
+    "ey",
+    "log_size_error",
+    "visual_range_scaled",
+    "forward_range_scaled",
+    "forward_valid",
+    "range_associated",
+    "confidence",
+    "detection_valid",
+    "frame_age_scaled",
+    "range_age_scaled",
+    "ex_rate_scaled",
+    "log_size_rate_scaled",
+    "previous_forward",
+    "previous_yaw",
+    "near_sensor_required"
+  ],
+  "action_names": [
+    "forward",
+    "yaw"
+  ],
+  "config": {
+    "dt": 0.1,
+    "history": 4,
+    "stand_off_m": 0.65,
+    "minimum_m": 0.4,
+    "near_entry_m": 1.15,
+    "forward_range_max_m": 1.2,
+    "range_stale_s": 0.4,
+    "frame_stale_s": 0.35,
+    "visual_scale_m": 0.22,
+    "confidence_min": 0.45,
+    "center_gate": 0.12,
+    "vertical_gate": 0.15,
+    "arrival_x": 0.05,
+    "arrival_range_m": 0.08,
+    "arrival_hold_s": 2.0,
+    "rc_forward_cap": 20,
+    "rc_yaw_cap": 25,
+    "max_steps": 400
+  },
+  "date": "2026-10-29",
+  "compared_commits": [
+    "50d18b8446a799b8f5ac984acf1f912b1a31f100",
+    "f88abed2e955f1bb5c419380cf37a88fec01554e"
+  ],
+  "local_tests": {
+    "passed": 43,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0,
+    "skip_reason": "Optional Stable-Baselines3/PyTorch unavailable locally; full checks required in Windows/Linux CI"
+  },
+  "local_versions": {
+    "numpy": "2.3.5",
+    "gymnasium": "1.0.0",
+    "opencv-contrib-python": "4.11.0.86",
+    "pytest": "8.3.5"
+  },
+  "local_environment_note": "Existing macOS bench environment uses contrib OpenCV. Fresh CI environments enforce standard opencv-python only; this local run does not validate the new full dependency installation.",
+  "ci_definition": ".github/workflows/python.yml",
+  "ci_checks": [
+    "Python 3.12 on Windows and Linux",
+    "pip check and exactly one OpenCV distribution",
+    "Full pytest including nondefault-config PPO train/load/evaluate/demo/replay",
+    "1024-transition PPO smoke test and metadata/evaluation artifacts"
+  ],
+  "pid_diagnostics": {
+    "episodes": 30,
+    "seed_start": 20000,
+    "outcomes": {
+      "success": 25,
+      "timeout": 5
+    },
+    "minimum_distance_violations": 0,
+    "status": "Inspected development seeds; not final held-out performance"
+  },
+  "limits": [
+    "No actual TT flight or sensor qualification",
+    "No new production PPO checkpoint",
+    "Simulator dynamics remain uncalibrated",
+    "Do not pool old and control-v2 results"
+  ]
+}

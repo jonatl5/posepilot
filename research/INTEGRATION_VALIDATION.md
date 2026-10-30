@@ -1,5 +1,7 @@
 # Integration verification — October 29, 2026
 
+Historical record for `f88abed`, before the control-v2 audit. See [current audit](TT_CONTROL_AUDIT.md) and [new evidence](../docs/evidence/control-v2/README.md).
+
 This record covers the integrated repository, separately from the original team Windows run. It does not establish flight readiness.
 
 | Check | Observed result |

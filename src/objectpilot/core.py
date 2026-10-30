@@ -19,6 +19,8 @@ FEATURE_NAMES = (
     "previous_forward", "previous_yaw", "near_sensor_required",
 )
 SCHEMA = "objectpilot-v1-16x4"
+CONTROL_CONTRACT = "objectpilot-control-v2"
+ACTION_NAMES = ("forward", "yaw")
 
 @dataclass
 class Config:
@@ -75,6 +77,13 @@ class Detection:
     frame_id: int
     label: str = "target"
 
+
+def policy_contract(config):
+    """Record behavior as well as tensor layout; old checkpoints require retraining."""
+    return {"schema": SCHEMA, "control_contract": CONTROL_CONTRACT,
+            "features": list(FEATURE_NAMES), "action_names": list(ACTION_NAMES),
+            "config": asdict(config)}
+
 @dataclass
 class RangeSample:
     distance_m: float | None
@@ -96,7 +105,8 @@ def parse_ext_tof(reply: str, timestamp: float) -> RangeSample:
 
 class CustomRangeParser:
     """Reject duplicate/backwards samples; reset parser explicitly after MCU restart."""
-    def __init__(self):
+    def __init__(self, config=None):
+        self.c = config or Config()
         self.previous_sequence = None
         self.reset_required = False
 
@@ -118,7 +128,7 @@ class CustomRangeParser:
         status = "ok"
         if not fresh_seq: status = "repeated_or_reset"
         elif not valid or mm in (0,8192,65535): status = "sensor_invalid"
-        elif not 0 <= response_time-request_start <= .25 or response_time-timestamp > .4: status = "stale"
+        elif not 0 <= response_time-request_start <= .25 or response_time-timestamp > self.c.range_stale_s: status = "stale"
         return RangeSample(mm/1000 if status=="ok" else None,timestamp,"forward_custom",status,seq)
 
 class FeatureBuilder:

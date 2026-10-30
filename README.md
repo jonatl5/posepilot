@@ -2,7 +2,7 @@
 
 Recognize a stationary printed object on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A PC runs YOLO, a PID baseline or PPO policy, and independent supervision. The working product name is objectPilot; the repository and Pages URL remain posepilot.
 
-[Website](https://jonatl5.github.io/posepilot/) · [PRD](PRD.md) · [Route comparison](research/ALIGNMENT.md) · [Control mapping](research/ARCHITECTURE.md) · [Data plan](research/DATA_COLLECTION.md) · [Hardware gates](research/HARDWARE_GATES.md)
+[Website](https://jonatl5.github.io/posepilot/) · [PRD](PRD.md) · [TT control audit](research/TT_CONTROL_AUDIT.md) · [Route comparison](research/ALIGNMENT.md) · [Control mapping](research/ARCHITECTURE.md) · [Data plan](research/DATA_COLLECTION.md) · [Hardware gates](research/HARDWARE_GATES.md)
 
 ## One implementation route
 
@@ -34,7 +34,7 @@ python -m objectpilot.evaluate --episodes 30 --seed 20000 --out runs/pid-integra
 
 Open `runs/demo-pid/demo.html` to play, pause and scrub the team's offline simulator trace. It embeds the generated recording and works without a server; it does not run YOLO or a policy in the browser. `summary.json` and `trajectory.jsonl` retain the exact episode.
 
-On Windows PowerShell, create the environment with `py -3.12 -m venv .venv`, then set `$opPython = (Resolve-Path .\.venv\Scripts\python.exe).Path` and replace each `python` invocation with `& $opPython`. This does not require changing execution policy. `requirements-lock.txt` preserves the team's Windows snapshot; use the extras above for other platforms. Add `--show` for the camera/video window. Synthetic image input exercises OpenCV and control interfaces; it is not a drone dynamics simulation. `objectpilot.evaluate` runs the action-responsive wall simulator. Output logs and evaluation folders must be new so previous evidence is preserved. The optional SB3 environment check is skipped unless the RL extra is installed.
+On Windows PowerShell, create the environment with `py -3.12 -m venv .venv`, then set `$opPython = (Resolve-Path .\.venv\Scripts\python.exe).Path` and replace each `python` invocation with `& $opPython`. This does not require changing execution policy. The historical Windows freeze is archived in `research/team-windows-requirements.txt`; it is not an installation file. Use the same `pyproject.toml` extras on every platform. Only install one OpenCV distribution: `opencv-python>=4.10,<5`, which includes the ArUco APIs used here. Start a clean environment if an older setup contains both standard and contrib wheels. Add `--show` for the camera/video window. Synthetic image input exercises OpenCV and control interfaces; it is not a drone dynamics simulation. `objectpilot.evaluate` runs the action-responsive wall simulator. Output logs and evaluation folders must be new so previous evidence is preserved. The optional SB3 environment check is skipped unless the RL extra is installed.
 
 ## YOLO and data
 
@@ -62,18 +62,20 @@ Replay and collection never send takeoff, landing or RC commands. `GroundLink` h
 
 ```bash
 python -m pip install -e '.[rl]'
-python -m objectpilot.train --steps 100000 --seed 0 --out runs/ppo-seed0
-python -m objectpilot.evaluate --model runs/ppo-seed0/policy.zip --episodes 100 --seed 30000 --out runs/ppo-validation
-python -m objectpilot.demo --model runs/ppo-seed0/policy.zip --out runs/demo-ppo
+python -m objectpilot.train --config configs/wall_approach.json --steps 100000 --seed 0 --out runs/ppo-seed0
+python -m objectpilot.evaluate --config configs/wall_approach.json --model runs/ppo-seed0/policy.zip --episodes 100 --seed 30000 --out runs/ppo-validation
+python -m objectpilot.demo --config configs/wall_approach.json --model runs/ppo-seed0/policy.zip --out runs/demo-ppo
 ```
 
-Train multiple seeds and compare tuned PID, nominal PPO and randomized PPO under matched settings. Use validation to select models and reserve new final test scenarios. Policies must match the entire Config and 64-value schema; the old 11-input reference is not deployable here. Video is not an interactive PPO environment. The default baseline remains PID unless a qualified alternative is more reliable.
+Train multiple seeds and compare tuned PID, nominal PPO and randomized PPO under matched settings. Use validation to select models and reserve new final test scenarios. Train, evaluate, demo and replay all accept `--config`. Use the same JSON file in each command. Policies must match the complete Config, ordered features, action names, actual tensor spaces and `objectpilot-control-v2` behavior version. Older checkpoints require retraining, including previous 64-input checkpoints without this behavior version. Video is not an interactive PPO environment. The default baseline remains PID unless a qualified alternative is more reliable.
 
 ## Evidence and provenance
 
 The original team run reported 15 tests and a ten-sample blank-video check. Its 30 diagnostic scenarios produced PID 30/30, initial PPO 14/30 after 100,352 transitions, and smoke PPO 0/30 after 8,192 transitions. Existing [CSV/trajectory evidence](docs/evidence/README.md) is preserved verbatim and is not relabeled as this integration's output. These inspected seeds are development data, not a final unseen test set.
 
-Current integration evidence is recorded in [research/INTEGRATION_VALIDATION.md](research/INTEGRATION_VALIDATION.md) and [machine-readable validation](docs/evidence/integration/validation.json). The team's later repository/demo verification remains in [research/validation.md](research/validation.md). The earlier standalone marker scores are not pooled with the team's results. No actual drone flight, sensor qualification or firmware compilation/flash is claimed.
+The current [TT audit](research/TT_CONTROL_AUDIT.md) compares both contributors and public projects. New [control-v2 evidence](docs/evidence/control-v2/README.md) is separate from earlier results. Simulation and replay now use the same target confirmation, arrival/stop gate and RC quantization; physical truth audits simulation success without changing the command gate.
+
+Historical integration evidence is recorded in [research/INTEGRATION_VALIDATION.md](research/INTEGRATION_VALIDATION.md) and [machine-readable validation](docs/evidence/integration/validation.json). The team's later repository/demo verification remains in [research/validation.md](research/validation.md). The earlier standalone marker scores are not pooled with the team's results. No actual drone flight, sensor qualification or firmware compilation/flash is claimed.
 
 The imported source is identified in [source-provenance.json](research/source-provenance.json). Original team authorship/license remains in place. The [alignment review](research/ALIGNMENT.md) explains reused components, additions and retired conflicting settings.
 

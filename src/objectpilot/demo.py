@@ -1,20 +1,19 @@
 """Offline, recorded simulator demo: no camera, downloaded weights or drone required."""
 import argparse
 import json
-from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path
 
-from .core import Config, PID, SCHEMA, rc_channels
+from .core import Config, PID, policy_contract, rc_channels
 from .env import ApproachEnv
 from .evaluate import load_policy
 
 
-def run_demo(out, seed=10000, model_path=None, randomized=True):
+def run_demo(out, seed=10000, model_path=None, randomized=True, config=None):
     out = Path(out)
     if out.exists():
         raise FileExistsError(f"Output already exists: {out}; choose a new --out directory")
-    config = Config()
+    config = config or Config()
     policy = load_policy(model_path, config) if model_path else None
     controller = PID(config)
     env = ApproachEnv(config, randomized=randomized)
@@ -36,9 +35,10 @@ def run_demo(out, seed=10000, model_path=None, randomized=True):
                 break
     finally:
         env.close()
-    summary = dict(schema=SCHEMA, seed=seed, randomized=randomized,
+    summary = dict(**policy_contract(config), seed=seed, randomized=randomized,
                    controller="PPO" if policy else "PID starting gains", model=str(model_path) if model_path else None,
-                   config=asdict(config), outcome=info["outcome"], success=info["success"],
+                   outcome=info["outcome"], success=info["success"],
+                   measured_arrival=info["measured_arrival"], truth_verified=info["truth_verified"],
                    time_s=info["time_s"], final_clearance_m=info["wall_clearance_m"],
                    minimum_clearance_m=min(-s["x"] for s in samples),
                    evidence="synthetic sensor simulation; no flight or detector inference")
@@ -58,9 +58,11 @@ def main():
     parser.add_argument("--out", default="runs/demo_pid")
     parser.add_argument("--seed", type=int, default=10000)
     parser.add_argument("--model", help="Optional PPO policy.zip; metadata.json must be beside it")
+    parser.add_argument("--config", help="JSON Config shared with training and camera replay")
     parser.add_argument("--nominal", action="store_true", help="Reduce randomization, retaining the same observation interface")
     args = parser.parse_args()
-    summary = run_demo(args.out, args.seed, args.model, not args.nominal)
+    config = Config.from_json(args.config) if args.config else Config()
+    summary = run_demo(args.out, args.seed, args.model, not args.nominal, config)
     print(json.dumps(summary, indent=2))
     print(f"Open {(Path(args.out) / 'demo.html').resolve()}")
 

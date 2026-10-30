@@ -1,6 +1,7 @@
 """Planar command-response simulator. NOT a validated TT flight model.
 
-Wall x=0, stationary poster at (0,0), drone x<0; heading positive toward +y.
+Wall x=0, stationary poster at (0,0), drone x<0. At zero heading,
++y is camera-right; positive heading turns right (clockwise in the top view).
 Pixels/ToF are synthetic sensors. Truth is used only for dynamics/reward/info.
 """
 from collections import deque
@@ -8,7 +9,9 @@ import math
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from .core import Config, Detection, RangeSample, FeatureBuilder, Supervisor
+from .core import Config, Detection, RangeSample, FeatureBuilder, rc_channels, CONTROL_CONTRACT
+from .pipeline import ControlGate
+from .vision import TargetLock
 
 class ApproachEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 10}
@@ -26,7 +29,7 @@ class ApproachEnv(gym.Env):
         self.y = float(r.uniform(-.65, .65))
         self.heading = float(r.uniform(-.25, .25))
         self.v = self.w = self.time = 0.
-        self.steps = self.hold = self.lost = 0
+        self.steps = self.lost = 0
         self.success = False
         self.previous = np.zeros(2, dtype=np.float32)
         self.gain = float(r.uniform(.18, .4)) if self.randomized else .28
@@ -39,7 +42,8 @@ class ApproachEnv(gym.Env):
         self.hfov = math.radians(float(r.uniform(66, 78)) if self.randomized else 72)
         self.sensors = deque(maxlen=self.camera_lag+1)
         self.commands = deque([np.zeros(2)]*self.command_lag)
-        self.builder, self.supervisor = FeatureBuilder(c), Supervisor(c)
+        self.builder, self.gate = FeatureBuilder(c), ControlGate(c)
+        self.target_lock = TargetLock()
         self.obs = self._observe()
         return self.obs, self._info("running")
 
@@ -62,16 +66,22 @@ class ApproachEnv(gym.Env):
                             .9, self.time, self.steps)
         self.sensors.append(det)
         delayed = self.sensors[0] if len(self.sensors)==self.sensors.maxlen else None
+        self.detection = self.target_lock.select([delayed] if delayed else [],
+                                                 self.steps-self.camera_lag)
         ray = -self.x/math.cos(self.heading) if math.cos(self.heading)>.1 else 100.
         range_sample = RangeSample(None, self.time, "sim_forward", "out_of_range")
         if .02 < ray <= c.forward_range_max_m and r.random() >= self.dropout*.5:
             range_sample = RangeSample(max(.02,ray+float(r.normal(0,.01))), self.time, "sim_forward")
-        return self.builder.build(delayed, range_sample, self.time, self.previous)
+        self.range_sample = range_sample
+        return self.builder.build(self.detection, range_sample, self.time, self.previous)
 
     def step(self, action):
         c = self.c
-        safe, reason = self.supervisor.apply(action, self.obs)
-        self.commands.append(safe.copy())
+        safe, reason = self.gate.apply(action, self.obs, self.time, self.range_sample)
+        # The nominal gains describe RC=20 forward and RC=25 yaw. Apply the
+        # same integer channel quantization and configurable caps as deployment.
+        rc = rc_channels(safe, c)
+        self.commands.append(np.array([rc[1]/20., rc[3]/25.]))
         applied = self.commands.popleft()
         alpha = 1-math.exp(-c.dt/self.tau)
         self.v += alpha*(self.gain*applied[0]-self.v)
@@ -87,16 +97,17 @@ class ApproachEnv(gym.Env):
         self.previous = safe
         self.obs = self._observe()
         f = self.obs[-16:]
-        arrived = (f[6]>.5 and abs(f[0])<c.arrival_x
-                   and abs(f[4]*c.forward_range_max_m-c.stand_off_m)<c.arrival_range_m
-                   and abs(self.v)<.04 and abs(clearance-c.stand_off_m)<c.arrival_range_m)
-        self.hold = self.hold+1 if arrived else 0
         self.lost = self.lost+1 if f[8]<.5 else 0
-        self.success = self.hold*c.dt >= c.arrival_hold_s
+        measured_arrival = self.gate.arrival.arrived
+        # Truth audits the terminal result; it never affects gate decisions or
+        # policy observations. A measured arrival can fail physical verification.
+        truth_verified = (abs(self.v)<.04 and abs(ex)<c.arrival_x
+                          and abs(clearance-c.stand_off_m)<c.arrival_range_m)
         collision = clearance <= c.minimum_m
         out = abs(self.y)>2 or self.x < -4 or abs(self.heading)>math.pi/2
         lost = self.lost*c.dt > 3.
-        terminated = bool(self.success or collision or out or lost)
+        self.success = bool(measured_arrival and truth_verified and not (collision or out or lost))
+        terminated = bool(measured_arrival or collision or out or lost)
         truncated = bool(self.steps>=c.max_steps and not terminated)
         # Truth-dependent reward, deliberately absent from the policy observation.
         reward = (-.6*min(abs(distance-c.stand_off_m),3) - 1.5*min(abs(ex),1)
@@ -104,14 +115,19 @@ class ApproachEnv(gym.Env):
         if self.success: reward += 30
         if collision: reward -= 30
         if out or lost: reward -= 10
-        outcome = "success" if self.success else "minimum_distance" if collision else "boundary" if out else "lost" if lost else "timeout" if truncated else "running"
+        if measured_arrival and not self.success: reward -= 10
+        outcome = ("minimum_distance" if collision else "boundary" if out else "lost" if lost
+                   else "success" if self.success else "arrival_unverified" if measured_arrival
+                   else "timeout" if truncated else "running")
         info = self._info(outcome)
-        info.update(supervisor=reason, applied_action=applied.tolist(), safe_action=safe.tolist(), smoothness=smooth)
+        info.update(supervisor=reason, applied_action=applied.tolist(), safe_action=safe.tolist(),
+                    rc=list(rc), smoothness=smooth, measured_arrival=measured_arrival,
+                    truth_verified=bool(truth_verified))
         return self.obs, float(reward), terminated, truncated, info
 
     def _info(self, outcome):
         distance, _, ex = self._geometry()
-        return {"outcome":outcome, "success":bool(self.success), "wall_clearance_m":float(-self.x),
+        return {"control_contract":CONTROL_CONTRACT, "outcome":outcome, "success":bool(self.success), "wall_clearance_m":float(-self.x),
                 "target_distance_m":float(distance), "center_error":float(ex), "time_s":float(self.time)}
 
     def render(self):

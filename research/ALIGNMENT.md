@@ -1,5 +1,7 @@
 # Route comparison and integration decisions
 
+The follow-up [TT control audit](TT_CONTROL_AUDIT.md) resolves the remaining simulator/replay differences below and introduces `objectpilot-control-v2`. This document records the earlier integration decisions.
+
 Compared on October 29, 2026 against `jonatl5/posepilot` main at `8407cb14ac1a5171274565fa4bac3c68301c7bde`. A final refresh found commit `50d18b8446a799b8f5ac984acf1f912b1a31f100`, which publishes the same canonical source plus an offline demo, HTML template, tests and CI. Those additions are retained. Original archive hashes remain in `source-provenance.json`; this integration is based on the newer commit.
 
 | Area | Team route | Earlier local reference | Integrated decision |
@@ -25,7 +27,7 @@ Compared on October 29, 2026 against `jonatl5/posepilot` main at `8407cb14ac1a51
 
 ## Preserved boundaries
 
-The historic PID/PPO CSVs and trajectory describe the original team's Windows run. They are not silently regenerated or relabeled as tests of this integration. The environment keeps its additional ground-truth velocity and wall-clearance success checks; the camera pipeline can only check measured image/range stability. Real stopping drift, optical offsets and radio-loss behavior remain hardware work.
+The historic PID/PPO CSVs and trajectory describe the original team's Windows run. They are not silently regenerated or relabeled as tests of this integration. At this historical integration, the environment retained a separate truth-dependent arrival hold. The follow-up audit replaces that split with one measured control gate; simulator truth now audits the terminal result separately. Real stopping drift, optical offsets and radio-loss behavior remain hardware work.
 
 The original 11-input reference code remains in the local working folder as prior experimental work. Its conflicting controller, simulator and live-flight CLI are not shipped as an alternative production route. Useful components were migrated into `src/objectpilot` instead.
 

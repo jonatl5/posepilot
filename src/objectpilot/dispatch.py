@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass
 import math
 import threading
 import time
-from .core import Config, SCHEMA, rc_channels
+from .core import Config, SCHEMA, CONTROL_CONTRACT, rc_channels
 
 
 @dataclass(frozen=True)
@@ -84,7 +84,8 @@ class CommandDispatcher:
             timestamp = float(row["timestamp"])
             action = tuple(float(v) for v in row["safe_action"])
             observation = tuple(float(v) for v in row["observation"])
-            valid = (row["schema"] == SCHEMA and row["config"] == asdict(self.c)
+            valid = (row["schema"] == SCHEMA and row["control_contract"] == CONTROL_CONTRACT
+                     and row["config"] == asdict(self.c)
                      and len(action) == 2 and len(observation) == 64
                      and all(math.isfinite(v) for v in (*action, *observation, timestamp))
                      and 0 <= action[0] <= 1 and -1 <= action[1] <= 1

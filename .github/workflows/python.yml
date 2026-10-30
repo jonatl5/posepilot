@@ -7,7 +7,6 @@ on:
       - 'tests/**'
       - 'firmware/**'
       - 'pyproject.toml'
-      - 'requirements-lock.txt'
       - 'README.md'
       - 'docs/**'
       - 'research/**'
@@ -20,7 +19,6 @@ on:
       - 'tests/**'
       - 'firmware/**'
       - 'pyproject.toml'
-      - 'requirements-lock.txt'
       - 'README.md'
       - 'docs/**'
       - 'research/**'
@@ -34,7 +32,14 @@ permissions:
 
 jobs:
   offline:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +49,11 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: Install software dependencies
-        run: python -m pip install -e ".[vision,test,rl]"
+        run: |
+          python -m pip install -e ".[vision,test,rl,hardware,video]"
+          python -m pip check
+          python -m pip freeze > environment-resolved.txt
+          python -c "from importlib.metadata import distributions; names={d.metadata['Name'].lower() for d in distributions()}; assert names & {'opencv-python','opencv-contrib-python','opencv-python-headless','opencv-contrib-python-headless'} == {'opencv-python'}"
       - name: Unit and environment tests
         run: python -m pytest -q
       - uses: actions/setup-node@v4
@@ -58,12 +67,21 @@ jobs:
           node scripts/check-site.mjs
       - name: Offline demo and PPO save/load smoke test
         run: |
-          python -m objectpilot.demo --out runs/ci_pid
-          python -m objectpilot.train --steps 1024 --seed 0 --out runs/ci_ppo
-          python -m objectpilot.evaluate --model runs/ci_ppo/policy.zip --episodes 3 --seed 20000 --out runs/ci_eval
-          python -m objectpilot.demo --model runs/ci_ppo/policy.zip --out runs/ci_ppo_demo
+          python -m objectpilot.demo --config configs/wall_approach.json --out runs/ci_pid
+          python -m objectpilot.train --config configs/wall_approach.json --steps 1024 --seed 0 --out runs/ci_ppo
+          python -m objectpilot.evaluate --config configs/wall_approach.json --model runs/ci_ppo/policy.zip --episodes 3 --seed 20000 --out runs/ci_eval
+          python -m objectpilot.demo --config configs/wall_approach.json --model runs/ci_ppo/policy.zip --out runs/ci_ppo_demo
       - name: Generate firmware from the reviewed upstream revision
         run: |
           git clone https://github.com/RoboMaster/RMTT_Libs.git artifacts/RMTT_Libs
           git -C artifacts/RMTT_Libs checkout b8ece60ec31eeca3350209a2559f549864e91dce
           python firmware/prepare_firmware.py --upstream artifacts/RMTT_Libs --out artifacts/firmware/objectpilot_default
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: software-evidence-${{ matrix.os }}
+          path: |
+            environment-resolved.txt
+            runs/ci_ppo/metadata.json
+            runs/ci_eval/summary.json
+            runs/ci_eval/episodes.csv
