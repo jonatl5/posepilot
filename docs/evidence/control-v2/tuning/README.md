@@ -30,7 +30,7 @@ Censored mean time counts failed episodes at the 40 s limit. The validation scen
 
 ## Environment
 
-Windows 11, Python 3.12.16, numpy 2.5.4, gymnasium 1.4.0, torch 2.15.0 (CPU), stable-baselines3 2.9.2, opencv-python 4.14.0; 56 local tests passed. The `git_base` fields name the parent revision `c31b413`; the tuning tool and these files land in the recording commit. The Windows and Linux CI runs for that commit are linked from the repository once they complete.
+Windows 11, Python 3.12.16, numpy 2.5.4, gymnasium 1.4.0, torch 2.15.0 (CPU), stable-baselines3 2.9.2, opencv-python 4.14.0; 56 local tests passed. The `git_base` fields name the parent revision `c31b413`; the tuning tool and these files land in the recording commit. [Windows and Linux CI](https://github.com/jonatl5/posepilot/actions/runs/41240684647) passed for `c218de6`, the reviewed revision of these tools: 56 tests on Linux and 56 on Windows with no skips, the PID tuning smoke run, the committed tuned-gains evaluation and demo, dependency checks, English/PRD synchronization checks and firmware source generation. Re-running the tuned PID, starting PID and PPO 1M seed 2 validations with that revision reproduced the committed episode rows exactly.
 
 ## Reproduce
 
