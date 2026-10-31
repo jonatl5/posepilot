@@ -36,6 +36,18 @@ Open `runs/demo-pid/demo.html` to play, pause and scrub the team's offline simul
 
 On Windows PowerShell, create the environment with `py -3.12 -m venv .venv`, then set `$opPython = (Resolve-Path .\.venv\Scripts\python.exe).Path` and replace each `python` invocation with `& $opPython`. This does not require changing execution policy. The historical Windows freeze is archived in `research/team-windows-requirements.txt`; it is not an installation file. Use the same `pyproject.toml` extras on every platform. Only install one OpenCV distribution: `opencv-python>=4.10,<5`, which includes the ArUco APIs used here. Start a clean environment if an older setup contains both standard and contrib wheels. Add `--show` for the camera/video window. Synthetic image input exercises OpenCV and control interfaces; it is not a drone dynamics simulation. `objectpilot.evaluate` runs the action-responsive wall simulator. Output logs and evaluation folders must be new so previous evidence is preserved. The optional SB3 environment check is skipped unless the RL extra is installed.
 
+## Tune the PID baseline and reserve the final test
+
+Scenario seeds are the simulator's only randomness, so seed ranges partition the scenarios. Seeds 10000–10029 and 20000–20029 are inspected development diagnostics. Seeds 40000–40099 tune PID gains, seeds 30000–30099 select between controllers and training seeds, and seeds 50000–50099 are reserved for the frozen final comparison: `objectpilot.evaluate` refuses them unless `--final-test` is passed at feature freeze, and `objectpilot.tune_pid` never accepts them.
+
+```bash
+python -m objectpilot.tune_pid --config configs/wall_approach.json --out runs/pid-tuning
+python -m objectpilot.evaluate --config configs/wall_approach.json --gains configs/pid_gains_tuned.json --episodes 100 --seed 30000 --out runs/pid-tuned-validation
+python -m objectpilot.demo --config configs/wall_approach.json --gains configs/pid_gains_tuned.json --out runs/demo-pid-tuned
+```
+
+The tuning command runs every grid candidate on the tuning seeds, re-runs the shortlist and the starting gains on the validation seeds, and writes `selected_gains.json` with the complete selection record. [configs/pid_gains_tuned.json](configs/pid_gains_tuned.json) is the October 31 candidate selected that way: on the 100 validation scenarios it completed 92 approaches against 87 for the starting gains, both with zero minimum-distance violations. Gains are controller parameters, not part of the observation/config contract; `--gains` applies to evaluate, demo and replay, never together with `--model`, and every PID output records the gains in use. The candidate is a simulation result: RC response, braking and sensor timing are uncalibrated, so re-tune after the hardware gates. [research/CONTROLLER_TUNING.md](research/CONTROLLER_TUNING.md) records the protocol, the control-v2 PPO seeds and three simulator findings that gains cannot fix.
+
 ## YOLO and data
 
 ```bash
@@ -67,7 +79,7 @@ python -m objectpilot.evaluate --config configs/wall_approach.json --model runs/
 python -m objectpilot.demo --config configs/wall_approach.json --model runs/ppo-seed0/policy.zip --out runs/demo-ppo
 ```
 
-Train multiple seeds and compare tuned PID, nominal PPO and randomized PPO under matched settings. Use validation to select models and reserve new final test scenarios. Train, evaluate, demo and replay all accept `--config`. Use the same JSON file in each command. Policies must match the complete Config, ordered features, action names, actual tensor spaces and `objectpilot-control-v2` behavior version. Older checkpoints require retraining, including previous 64-input checkpoints without this behavior version. Video is not an interactive PPO environment. The default baseline remains PID unless a qualified alternative is more reliable.
+Train multiple seeds and compare tuned PID, nominal PPO and randomized PPO under matched settings. Seeds 30000–30099 are the validation scenarios used for selection; seeds 50000–50099 stay reserved until feature freeze. Train, evaluate, demo and replay all accept `--config`. Use the same JSON file in each command. Policies must match the complete Config, ordered features, action names, actual tensor spaces and `objectpilot-control-v2` behavior version. Older checkpoints require retraining, including previous 64-input checkpoints without this behavior version. Video is not an interactive PPO environment. The default baseline remains PID unless a qualified alternative is more reliable.
 
 ## Evidence and provenance
 
@@ -76,6 +88,8 @@ The original team run reported 15 tests and a ten-sample blank-video check. Its 
 The current [TT audit](research/TT_CONTROL_AUDIT.md) compares both contributors and public projects. New [control-v2 evidence](docs/evidence/control-v2/README.md) is separate from earlier results. Simulation and replay now use the same target confirmation, arrival/stop gate and RC quantization; physical truth audits simulation success without changing the command gate.
 
 Historical integration evidence is recorded in [research/INTEGRATION_VALIDATION.md](research/INTEGRATION_VALIDATION.md) and [machine-readable validation](docs/evidence/integration/validation.json). The team's later repository/demo verification remains in [research/validation.md](research/validation.md). The earlier standalone marker scores are not pooled with the team's results. No actual drone flight, sensor qualification or firmware compilation/flash is claimed.
+
+The October 31 [controller tuning record](research/CONTROLLER_TUNING.md) and its [evidence folder](docs/evidence/control-v2/tuning/README.md) add the tuned PID candidate, three control-v2 PPO training seeds at two budgets and the reserved final test seeds. These are validation-seed results on the uncalibrated simulator; the reserved seeds have not been run.
 
 The imported source is identified in [source-provenance.json](research/source-provenance.json). Original team authorship/license remains in place. The [alignment review](research/ALIGNMENT.md) explains reused components, additions and retired conflicting settings.
 
@@ -89,9 +103,11 @@ The imported source is identified in [source-provenance.json](research/source-pr
 | `src/objectpilot/replay.py`, `video.py`, `ground_link.py` | File, webcam, synthetic and ground-only Tello input |
 | `src/objectpilot/dispatch.py` | Independent watchdog scaffold; fake-I/O tests |
 | `src/objectpilot/env.py`, `train.py`, `evaluate.py`, `demo.py` | Team simulator, offline HTML demo and PPO/PID research workflow |
+| `src/objectpilot/tune_pid.py` | PID gain grid on tuning seeds, validation selection and the selection record |
 | `src/objectpilot/data.py`, `collect.py`, `calibrate_camera.py` | Collection, labels, splitting, training and calibration |
 | `firmware/` | Reviewed extension generator and optional external ToF starting point |
 | `configs/wall_approach.json` | Canonical initial Config, not a flight qualification |
+| `configs/pid_gains_tuned.json` | Tuned PID candidate selected on validation seeds; not hardware calibrated |
 | `research/`, `tests/` | English plans, provenance, evidence and regression checks |
 | `docs/` | GitHub Pages source, English PRD and published evidence |
 

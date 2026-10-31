@@ -18,7 +18,10 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [ ] Record and label real wall prints, distractors and negative clips.
 - [ ] Choose two or three target classes from measured pretrained-detector reliability.
 - [ ] Fit per-print visual scale on calibration-only data and benchmark held-out detection.
-- [ ] Tune PID, train multiple PPO seeds and reserve untouched final evaluation scenarios.
+- [x] Tune PID on tuning seeds 40000–40099 and select on validation seeds 30000–30099; reserve final test seeds 50000–50099 (simulation only, see [CONTROLLER_TUNING.md](research/CONTROLLER_TUNING.md)).
+- [x] Train three control-v2 PPO seeds at two training budgets and validate them on the same 100 scenarios.
+- [ ] Decide the three simulator findings that gains cannot fix: hold resets on brief detection loss, the near-entry latch against the ToF range, and supervisor creep at the minimum clearance.
+- [ ] Re-tune gains and re-select checkpoints on a measured-response simulator; run the reserved final test once at feature freeze.
 
 ## Hardware and flight
 
@@ -44,4 +47,5 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [x] Version controller behavior and reject incompatible PPO checkpoints.
 - [x] Retire the conflicting root dependency snapshot; retain the original under research.
 - [x] Add cross-path regression tests and Windows/Linux CI with resolved environment artifacts.
-- [ ] Retrain multiple PPO seeds under control-v2 and qualify actual TT response.
+- [x] Retrain multiple PPO seeds under control-v2 (three seeds, two budgets, validation seeds 30000–30099).
+- [ ] Qualify actual TT response.

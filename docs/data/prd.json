@@ -1,13 +1,14 @@
 {
   "title": "objectPilot Product Requirements",
-  "edition": "TT control alignment edition · October 29, 2026",
+  "edition": "Controller tuning edition · October 31, 2026",
   "source_url": "https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit",
   "source_revision": "Aligned with the team's October 29, 2026 Revision 2 PRD",
   "overview": [
     "Recognize a stationary printed object image on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A laptop runs YOLO11n, a PID baseline or PPO policy, and an independent supervisor. The ESP32 expansion supplies forward infrared time-of-flight measurements.",
     "The primary demonstration uses matte wall prints, normal indoor lighting and fixed altitude. Physical three-dimensional objects require a separate validation stage. The aircraft is still awaiting delivery; no real TT flight or sensor qualification is claimed.",
     "The repository now contains the team starter implementation and aligned additions. YOLO wall prints remain the demonstration target. ArUco/red-card inputs are bench fixtures using the same 64-value contract, PID/PPO interface and supervisor.",
-    "A follow-up audit of both contributors and public TT/Tello projects aligns simulation and camera replay under objectpilot-control-v2. Observation layout remains 16 x 4; old PPO checkpoints require retraining."
+    "A follow-up audit of both contributors and public TT/Tello projects aligns simulation and camera replay under objectpilot-control-v2. Observation layout remains 16 x 4; old PPO checkpoints require retraining.",
+    "An October 31 follow-up tunes the PID gains on tuning seeds, selects on validation seeds, trains three control-v2 PPO seeds at two budgets and reserves seeds 50000–50099 for the frozen final comparison. Three simulator findings await a team decision."
   ],
   "scope": [
     [
@@ -65,14 +66,14 @@
       "area": "Policy",
       "requirement": "Deterministic PPO inference on the laptop; save model, config, scaling, schema and seed together.",
       "priority": "Must",
-      "status": "Shared JSON config accepted by train/evaluate/demo/replay; old behavior checkpoints rejected; new qualification pending"
+      "status": "Shared JSON config accepted by train/evaluate/demo/replay; old behavior checkpoints rejected; three control-v2 seeds trained at 100k and 1M transitions and validated on 100 scenarios, best 85/100; checkpoint freeze pending hardware"
     },
     {
       "id": "F6",
       "area": "Baseline",
       "requirement": "Configurable PID using the same observation and supervisor; tune on validation scenarios.",
       "priority": "Must",
-      "status": "Initial gains evaluated; tuning and hardware response calibration pending"
+      "status": "Gains tuned on tuning seeds and selected on validation seeds, configs/pid_gains_tuned.json, 92/100 against 87/100 for the starting gains; hardware response calibration pending"
     },
     {
       "id": "F7",
@@ -93,7 +94,7 @@
       "area": "Supervisor",
       "requirement": "Reject stale/missing detections, invalid actions, stale telemetry and near-range loss. Close raw range overrides association.",
       "priority": "Must",
-      "status": "Stale input, near-range loss, invalid state and raw proximity guards covered by software checks"
+      "status": "Stale input, near-range loss, invalid state and raw proximity guards covered by software checks; simulation shows a policy can creep to the minimum clearance without hysteresis, pending a control-v3 decision"
     },
     {
       "id": "F10",
@@ -121,7 +122,7 @@
       "area": "Simulator",
       "requirement": "Planar wall-target environment with first-order response, action/observation delay, noise and dropout; seeded reset.",
       "priority": "Must",
-      "status": "Planar simulator and initial comparisons completed"
+      "status": "Planar simulator and initial comparisons completed; dropout hold resets and the near-entry/ToF-range margin recorded as open findings"
     },
     {
       "id": "F14",
@@ -237,6 +238,10 @@
       "Official SDK and six public project/library references reviewed. Shared gate, target confirmation, RC quantization, configurable entrypoints and checkpoint checks implemented. New diagnostics are stored separately under docs/evidence/control-v2; older evidence remains unchanged. Windows and Linux CI each passed 46 tests without skips, including a nondefault-config PPO workflow and separate 1024-transition smoke run."
     ],
     [
+      "Controller tuning",
+      "324 PID gain candidates ranked on 50 tuning scenarios, shortlist selected on 100 validation scenarios: tuned 92/100, starting 87/100, zero minimum-distance violations. Three PPO seeds at 100k and 1M transitions: 34/15/80 and 76/67/85 successes, seed 1 with 77 and 29 violations. Final test seeds 50000–50099 reserved and unrun."
+    ],
+    [
       "Comparison boundary",
       "The earlier local 11-input marker controller is superseded, not deployed. Its 50-scenario score and 52-test suite are not evidence for this integrated implementation."
     ],
@@ -247,7 +252,7 @@
   ],
   "evaluation": [
     "Retain PID as the demonstration baseline unless a qualified alternative is more reliable. Compare tuned PID, nominal PPO and randomized PPO with identical detector settings, action caps and supervisor.",
-    "Train at least three PPO seeds. Select checkpoints and gains using validation only, then freeze them. The 30 already-inspected diagnostic seeds are development data; use new held-out scenarios for the final comparison.",
+    "Train at least three PPO seeds. Select checkpoints and gains using validation seeds 30000–30099 only, then freeze them. Inspected diagnostic seeds and tuning seeds 40000–40099 are development data; the reserved seeds 50000–50099 are the final comparison and are run once, at feature freeze.",
     "Start with 100 held-out simulated episodes per training seed. Aim for at least ten paired hardware trials per controller after hardware gates pass; report actual sample size, failures and interventions.",
     "Report success with Wilson intervals, measured wall-distance and image-center error, arrival time with failure outcomes, command changes, overshoot and minimum clearance. Do not claim a speed winner by dropping PPO failures.",
     "Use identical resolved JSON Config and control-contract version across training and evaluation. A measured arrival that fails the simulator truth audit is arrival_unverified, not success. Preserve older behavior results separately; do not relabel or pool them."

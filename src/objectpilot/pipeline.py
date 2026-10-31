@@ -72,16 +72,17 @@ class ControlGate:
 class ApproachPipeline:
     """Inputs are selected detections, in full-frame normalized coordinates."""
 
-    def __init__(self, config=None, policy=None):
+    def __init__(self, config=None, policy=None, gains=None):
         self.c = config or Config()
         self.policy = policy
+        self.gains = gains
         self.reset()
 
     def reset(self):
         self.builder = FeatureBuilder(self.c)
         self.gate = ControlGate(self.c)
         self.supervisor, self.arrival = self.gate.supervisor, self.gate.arrival
-        self.pid = PID(self.c)
+        self.pid = PID(self.c, self.gains)
         self.previous = np.zeros(2, dtype=np.float32)
 
     def step(self, detection, ranging, now, **supervisor_flags):
@@ -92,6 +93,8 @@ class ApproachPipeline:
         self.previous = safe.copy()
         return {"schema": SCHEMA, "control_contract": CONTROL_CONTRACT,
                 "config": asdict(self.c), "mode": "dry_run",
+                "controller": "PPO" if self.policy is not None else "PID "+self.pid.gains.label(),
+                "pid_gains": None if self.policy is not None else asdict(self.pid.gains),
                 "timestamp": now, "detection": asdict(detection) if detection else None,
                 "forward_range": asdict(ranging) if ranging else None,
                 "observation": obs.tolist(), "proposed_action": np.asarray(proposed).tolist(),

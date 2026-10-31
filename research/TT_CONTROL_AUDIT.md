@@ -69,7 +69,7 @@ To evaluate PID under matched conditions, omit `--model`. Change calibration in 
 
 ## Remaining measured work
 
-The control code is aligned at the software interface. The simulator is still a planar command-response approximation: it does not validate aerodynamic motion, wall effects, video exposure delay or independent sensor cadence. Qualify delivered TT firmware, forward sensor orientation, camera intrinsics/visual scale, RC signs/gain/lag/braking, fresh range transport and operator takeover. Ground-only capture stays available; the command watchdog remains an injected-I/O scaffold, not an autonomous flight launcher. See [hardware gates](HARDWARE_GATES.md).
+The control code is aligned at the software interface. The October 31 [controller tuning follow-up](CONTROLLER_TUNING.md) tunes the PID gains, retrains three PPO seeds under control-v2 and reserves the final test seeds; it also records three simulator findings for the team to decide. The simulator is still a planar command-response approximation: it does not validate aerodynamic motion, wall effects, video exposure delay or independent sensor cadence. Qualify delivered TT firmware, forward sensor orientation, camera intrinsics/visual scale, RC signs/gain/lag/braking, fresh range transport and operator takeover. Ground-only capture stays available; the command watchdog remains an injected-I/O scaffold, not an autonomous flight launcher. See [hardware gates](HARDWARE_GATES.md).
 
 ## Completed validation
 

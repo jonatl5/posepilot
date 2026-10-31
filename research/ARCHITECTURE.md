@@ -32,7 +32,7 @@ For frame width W and box center cx in pixels:
 - `d_visual = visual_scale_m / box_height_fraction`: a per-print, per-camera calibrated distance proxy.
 - Forward distance uses fresh associated ToF when available; otherwise it uses visual scale while outside the near-range gate.
 
-The initial PD baseline computes normalized forward/yaw proposals from errors `[distance - 0.65, ex]`, with proportional gains `[1.5, 3.5]`, derivative gains `[0.08, 0.05]` and zero integral gains. It resets the derivative at a visual/ToF handover. A PPO policy proposes the same two normalized actions.
+The PD baseline computes normalized forward/yaw proposals from errors `[distance - 0.65, ex]`. Its starting gains are proportional `[1.5, 3.5]`, derivative `[0.08, 0.05]` and zero integral; `PIDGains` makes them configurable, and the October 31 [tuned candidate](../configs/pid_gains_tuned.json) selected on validation seeds uses proportional `[4.0, 2.0]`, derivative `[0.2, 0.15]` and zero integral, see [CONTROLLER_TUNING.md](CONTROLLER_TUNING.md). It resets the derivative at a visual/ToF handover. A PPO policy proposes the same two normalized actions.
 
 | Situation | Result after supervision |
 |---|---|

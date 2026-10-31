@@ -1,0 +1,59 @@
+{
+  "schema": "objectpilot-v1-16x4",
+  "control_contract": "objectpilot-control-v2",
+  "features": [
+    "ex",
+    "ey",
+    "log_size_error",
+    "visual_range_scaled",
+    "forward_range_scaled",
+    "forward_valid",
+    "range_associated",
+    "confidence",
+    "detection_valid",
+    "frame_age_scaled",
+    "range_age_scaled",
+    "ex_rate_scaled",
+    "log_size_rate_scaled",
+    "previous_forward",
+    "previous_yaw",
+    "near_sensor_required"
+  ],
+  "action_names": [
+    "forward",
+    "yaw"
+  ],
+  "config": {
+    "dt": 0.1,
+    "history": 4,
+    "stand_off_m": 0.65,
+    "minimum_m": 0.4,
+    "near_entry_m": 1.15,
+    "forward_range_max_m": 1.2,
+    "range_stale_s": 0.4,
+    "frame_stale_s": 0.35,
+    "visual_scale_m": 0.22,
+    "confidence_min": 0.45,
+    "center_gate": 0.12,
+    "vertical_gate": 0.15,
+    "arrival_x": 0.05,
+    "arrival_range_m": 0.08,
+    "arrival_hold_s": 2.0,
+    "rc_forward_cap": 20,
+    "rc_yaw_cap": 25,
+    "max_steps": 400
+  },
+  "seed": 1,
+  "requested_steps": 1000000,
+  "actual_steps": 1000448,
+  "randomized": true,
+  "normalization": "fixed scaling in core.py; no VecNormalize",
+  "git_base": "c31b41331cc7638613fc4016820eab9abddb6536",
+  "status": "simulation candidate only",
+  "versions": {
+    "numpy": "2.5.4",
+    "torch": "2.15.0",
+    "gymnasium": "1.4.0",
+    "stable-baselines3": "2.9.2"
+  }
+}
