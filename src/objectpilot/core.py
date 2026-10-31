@@ -191,11 +191,47 @@ class FeatureBuilder:
 def latest(observation):
     return np.asarray(observation, dtype=np.float32)[-len(FEATURE_NAMES):]
 
+@dataclass
+class PIDGains:
+    """Forward/yaw PID gains. The defaults are the team's untuned PD starting gains.
+
+    Gains are controller parameters, not part of the observation/config contract.
+    A file selected on validation scenarios replaces the defaults through --gains
+    in evaluate, demo and replay. No gain here is calibrated to the real aircraft.
+    """
+    kp_forward: float = 1.5
+    kp_yaw: float = 3.5
+    ki_forward: float = 0.
+    ki_yaw: float = 0.
+    kd_forward: float = .08
+    kd_yaw: float = .05
+
+    def __post_init__(self):
+        for name, value in asdict(self).items():
+            if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be a finite nonnegative number")
+            setattr(self, name, float(value))
+        if min(self.kp_forward, self.kp_yaw) <= 0:
+            raise ValueError("Proportional gains must be positive")
+
+    @classmethod
+    def from_json(cls, path):
+        """Accept a flat gains object or a provenance record with a "gains" member."""
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        return cls(**(data["gains"] if isinstance(data, dict) and "gains" in data else data))
+
+    def label(self):
+        return "starting gains" if self == PIDGains() else "tuned gains"
+
+
 class PID:
-    """Configurable PID, initial integral gains zero (PD baseline). Tune on validation."""
-    def __init__(self, config=None, kp=(1.5, 3.5), ki=(0., 0.), kd=(.08, .05)):
+    """Configurable PID; the default PIDGains are the PD starting point. Tune on validation."""
+    def __init__(self, config=None, gains=None):
         self.c = config or Config()
-        self.kp, self.ki, self.kd = map(np.asarray, (kp, ki, kd))
+        self.gains = gains if gains is not None else PIDGains()
+        self.kp = np.array([self.gains.kp_forward, self.gains.kp_yaw])
+        self.ki = np.array([self.gains.ki_forward, self.gains.ki_yaw])
+        self.kd = np.array([self.gains.kd_forward, self.gains.kd_yaw])
         self.reset()
 
     def reset(self):

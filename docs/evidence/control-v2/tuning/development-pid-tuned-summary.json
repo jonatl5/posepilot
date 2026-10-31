@@ -1,0 +1,72 @@
+{
+  "episodes": 30,
+  "success_rate": 0.8666666666666667,
+  "success_95pct_wilson": [
+    0.7031831605558306,
+    0.9469043057578189
+  ],
+  "mean_success_time_s": 14.246153846153847,
+  "minimum_distance_violations": 0,
+  "mean_final_distance_error_m": 0.045334136612763413,
+  "evidence": "synthetic sensor simulation; not flight results",
+  "mean_time_censored_s": 17.68,
+  "schema": "objectpilot-v1-16x4",
+  "control_contract": "objectpilot-control-v2",
+  "features": [
+    "ex",
+    "ey",
+    "log_size_error",
+    "visual_range_scaled",
+    "forward_range_scaled",
+    "forward_valid",
+    "range_associated",
+    "confidence",
+    "detection_valid",
+    "frame_age_scaled",
+    "range_age_scaled",
+    "ex_rate_scaled",
+    "log_size_rate_scaled",
+    "previous_forward",
+    "previous_yaw",
+    "near_sensor_required"
+  ],
+  "action_names": [
+    "forward",
+    "yaw"
+  ],
+  "config": {
+    "dt": 0.1,
+    "history": 4,
+    "stand_off_m": 0.65,
+    "minimum_m": 0.4,
+    "near_entry_m": 1.15,
+    "forward_range_max_m": 1.2,
+    "range_stale_s": 0.4,
+    "frame_stale_s": 0.35,
+    "visual_scale_m": 0.22,
+    "confidence_min": 0.45,
+    "center_gate": 0.12,
+    "vertical_gate": 0.15,
+    "arrival_x": 0.05,
+    "arrival_range_m": 0.08,
+    "arrival_hold_s": 2.0,
+    "rc_forward_cap": 20,
+    "rc_yaw_cap": 25,
+    "max_steps": 400
+  },
+  "controller": "PID tuned gains",
+  "seed_start": 20000,
+  "seed_end": 20029,
+  "seed_role": "development",
+  "randomized": true,
+  "model": null,
+  "pid_gains": {
+    "kp_forward": 4.0,
+    "kp_yaw": 2.0,
+    "ki_forward": 0.0,
+    "ki_yaw": 0.0,
+    "kd_forward": 0.2,
+    "kd_yaw": 0.15
+  },
+  "gains_file": "configs/pid_gains_tuned.json"
+}

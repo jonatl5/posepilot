@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from dataclasses import replace
 import cv2
-from .core import Config, RangeSample
+from .core import Config, PIDGains, RangeSample
 from .pipeline import ApproachPipeline
 from .vision import YOLODetector, MarkerDetector, TargetLock
 from .evaluate import load_policy
@@ -35,6 +35,7 @@ def main(argv=None):
     p.add_argument("--marker-id", type=int, default=0)
     p.add_argument("--model", help="Optional PPO policy.zip; defaults to PID")
     p.add_argument("--config", help="Complete JSON Config; must match PPO metadata")
+    p.add_argument("--gains", help="PID gains JSON for the baseline; not used with --model")
     p.add_argument("--visual-scale", type=float, help="Per-print calibrated scale; not a universal distance model")
     p.add_argument("--range-jsonl", help="File-only range sidecar using video seconds")
     p.add_argument("--range-mode", choices=("none", "stock", "custom"), default="none")
@@ -51,6 +52,8 @@ def main(argv=None):
         p.error("Range sidecars use video time and require a file source")
     if a.range_mode != "none" and a.source != "tello":
         p.error("Range queries require --source tello")
+    if a.model and a.gains:
+        p.error("--gains configures the PID baseline; omit it with --model")
     c = Config.from_json(a.config) if a.config else Config()
     if a.visual_scale is not None:
         c = replace(c, visual_scale_m=a.visual_scale)
@@ -60,7 +63,8 @@ def main(argv=None):
         p.error("Output exists; choose a new log path")
     detector = (YOLODetector(a.weights, a.class_name, c.confidence_min) if a.detector == "yolo"
                 else MarkerDetector(a.detector, a.marker_id))
-    pipeline = ApproachPipeline(c, load_policy(a.model, c) if a.model else None)
+    pipeline = ApproachPipeline(c, load_policy(a.model, c) if a.model else None,
+                                PIDGains.from_json(a.gains) if a.gains else None)
     lock = TargetLock()
     link = video = cap = None
     count = 0

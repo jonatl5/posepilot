@@ -71,6 +71,11 @@ jobs:
           python -m objectpilot.train --config configs/wall_approach.json --steps 1024 --seed 0 --out runs/ci_ppo
           python -m objectpilot.evaluate --config configs/wall_approach.json --model runs/ci_ppo/policy.zip --episodes 3 --seed 20000 --out runs/ci_eval
           python -m objectpilot.demo --config configs/wall_approach.json --model runs/ci_ppo/policy.zip --out runs/ci_ppo_demo
+      - name: PID tuning workflow and committed tuned-gains smoke test
+        run: |
+          python -m objectpilot.tune_pid --config configs/wall_approach.json --tuning-episodes 2 --validation-episodes 2 --kp-forward 1.5,2.5 --ki-forward 0 --kd-forward 0.08 --kp-yaw 3.5 --ki-yaw 0 --kd-yaw 0.05 --top 2 --workers 2 --out runs/ci_tuning
+          python -m objectpilot.evaluate --config configs/wall_approach.json --gains configs/pid_gains_tuned.json --episodes 3 --seed 30000 --out runs/ci_pid_tuned_eval
+          python -m objectpilot.demo --config configs/wall_approach.json --gains configs/pid_gains_tuned.json --out runs/ci_pid_tuned_demo
       - name: Generate firmware from the reviewed upstream revision
         run: |
           git clone https://github.com/RoboMaster/RMTT_Libs.git artifacts/RMTT_Libs
@@ -85,3 +90,5 @@ jobs:
             runs/ci_ppo/metadata.json
             runs/ci_eval/summary.json
             runs/ci_eval/episodes.csv
+            runs/ci_tuning/selected_gains.json
+            runs/ci_pid_tuned_eval/summary.json

@@ -1,21 +1,22 @@
 """Offline, recorded simulator demo: no camera, downloaded weights or drone required."""
 import argparse
 import json
+from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path
 
-from .core import Config, PID, policy_contract, rc_channels
+from .core import Config, PID, PIDGains, policy_contract, rc_channels
 from .env import ApproachEnv
 from .evaluate import load_policy
 
 
-def run_demo(out, seed=10000, model_path=None, randomized=True, config=None):
+def run_demo(out, seed=10000, model_path=None, randomized=True, config=None, gains=None, gains_file=None):
     out = Path(out)
     if out.exists():
         raise FileExistsError(f"Output already exists: {out}; choose a new --out directory")
     config = config or Config()
     policy = load_policy(model_path, config) if model_path else None
-    controller = PID(config)
+    controller = PID(config, gains)
     env = ApproachEnv(config, randomized=randomized)
     samples = []
     try:
@@ -36,7 +37,8 @@ def run_demo(out, seed=10000, model_path=None, randomized=True, config=None):
     finally:
         env.close()
     summary = dict(**policy_contract(config), seed=seed, randomized=randomized,
-                   controller="PPO" if policy else "PID starting gains", model=str(model_path) if model_path else None,
+                   controller="PPO" if policy else "PID "+controller.gains.label(), model=str(model_path) if model_path else None,
+                   pid_gains=None if policy else asdict(controller.gains), gains_file=gains_file,
                    outcome=info["outcome"], success=info["success"],
                    measured_arrival=info["measured_arrival"], truth_verified=info["truth_verified"],
                    time_s=info["time_s"], final_clearance_m=info["wall_clearance_m"],
@@ -59,10 +61,14 @@ def main():
     parser.add_argument("--seed", type=int, default=10000)
     parser.add_argument("--model", help="Optional PPO policy.zip; metadata.json must be beside it")
     parser.add_argument("--config", help="JSON Config shared with training and camera replay")
+    parser.add_argument("--gains", help="PID gains JSON for the baseline, e.g. configs/pid_gains_tuned.json; not used with --model")
     parser.add_argument("--nominal", action="store_true", help="Reduce randomization, retaining the same observation interface")
     args = parser.parse_args()
+    if args.model and args.gains:
+        parser.error("--gains configures the PID baseline; omit it with --model")
     config = Config.from_json(args.config) if args.config else Config()
-    summary = run_demo(args.out, args.seed, args.model, not args.nominal, config)
+    gains = PIDGains.from_json(args.gains) if args.gains else None
+    summary = run_demo(args.out, args.seed, args.model, not args.nominal, config, gains, args.gains)
     print(json.dumps(summary, indent=2))
     print(f"Open {(Path(args.out) / 'demo.html').resolve()}")
 

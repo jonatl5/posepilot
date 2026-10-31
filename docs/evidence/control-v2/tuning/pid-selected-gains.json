@@ -1,0 +1,291 @@
+{
+  "gains": {
+    "kp_forward": 4.0,
+    "kp_yaw": 2.0,
+    "ki_forward": 0.0,
+    "ki_yaw": 0.0,
+    "kd_forward": 0.2,
+    "kd_yaw": 0.15
+  },
+  "candidate": "c283",
+  "label": "tuned gains",
+  "status": "simulation candidate selected on validation seeds; not hardware calibrated",
+  "selection_rule": "highest success rate, then fewest minimum-distance violations, shortest mean episode time with failures counted at the time limit, smoothest commands; exact ties keep the starting gains",
+  "tuning": {
+    "seed_start": 40000,
+    "episodes": 50,
+    "seed_role": "tuning",
+    "candidates": 324,
+    "grid": {
+      "kp_forward": [
+        1.0,
+        1.5,
+        2.0,
+        2.5,
+        3.0,
+        4.0
+      ],
+      "ki_forward": [
+        0.0,
+        0.1,
+        0.2
+      ],
+      "kd_forward": [
+        0.0,
+        0.08,
+        0.2
+      ],
+      "kp_yaw": [
+        2.0,
+        3.5,
+        5.0
+      ],
+      "ki_yaw": [
+        0.0
+      ],
+      "kd_yaw": [
+        0.05,
+        0.15
+      ]
+    },
+    "selected_rank": 4,
+    "selected_summary": {
+      "episodes": 50,
+      "success_rate": 0.86,
+      "success_95pct_wilson": [
+        0.738135428014719,
+        0.9304925473797714
+      ],
+      "mean_success_time_s": 18.100000000000005,
+      "minimum_distance_violations": 0,
+      "mean_final_distance_error_m": 0.02550877338698219,
+      "evidence": "synthetic sensor simulation; not flight results",
+      "mean_time_censored_s": 21.166,
+      "successes": 43,
+      "outcomes": {
+        "success": 43,
+        "timeout": 7
+      },
+      "mean_center_error": 0.017177223976906228,
+      "mean_action_delta_sq": 0.027672261301908575,
+      "minimum_clearance_m": 0.5849929479285992
+    },
+    "starting_summary": {
+      "episodes": 50,
+      "success_rate": 0.78,
+      "success_95pct_wilson": [
+        0.6475818431054045,
+        0.8724621377569771
+      ],
+      "mean_success_time_s": 20.438461538461535,
+      "minimum_distance_violations": 0,
+      "mean_final_distance_error_m": 0.04236693957920709,
+      "evidence": "synthetic sensor simulation; not flight results",
+      "mean_time_censored_s": 24.742000000000004,
+      "successes": 39,
+      "outcomes": {
+        "success": 39,
+        "timeout": 11
+      },
+      "mean_center_error": 0.01168547042721908,
+      "mean_action_delta_sq": 0.0204872659815612,
+      "minimum_clearance_m": 0.6640023957606147
+    }
+  },
+  "validation": {
+    "seed_start": 30000,
+    "episodes": 100,
+    "seed_role": "validation",
+    "ranking": [
+      "c283",
+      "c285",
+      "c284",
+      "c255",
+      "c254",
+      "starting"
+    ],
+    "summaries": {
+      "c283": {
+        "episodes": 100,
+        "success_rate": 0.92,
+        "success_95pct_wilson": [
+          0.8500173312059693,
+          0.9589070305141891
+        ],
+        "mean_success_time_s": 14.984782608695653,
+        "minimum_distance_violations": 0,
+        "mean_final_distance_error_m": 0.034176383333095285,
+        "evidence": "synthetic sensor simulation; not flight results",
+        "mean_time_censored_s": 16.986,
+        "successes": 92,
+        "outcomes": {
+          "success": 92,
+          "timeout": 8
+        },
+        "mean_center_error": 0.017676866935746875,
+        "mean_action_delta_sq": 0.030564204527610307,
+        "minimum_clearance_m": 0.5790976868964323
+      },
+      "c285": {
+        "episodes": 100,
+        "success_rate": 0.92,
+        "success_95pct_wilson": [
+          0.8500173312059693,
+          0.9589070305141891
+        ],
+        "mean_success_time_s": 15.05,
+        "minimum_distance_violations": 0,
+        "mean_final_distance_error_m": 0.03428987279900807,
+        "evidence": "synthetic sensor simulation; not flight results",
+        "mean_time_censored_s": 17.046,
+        "successes": 92,
+        "outcomes": {
+          "success": 92,
+          "timeout": 8
+        },
+        "mean_center_error": 0.01563532186589652,
+        "mean_action_delta_sq": 0.03193674290797162,
+        "minimum_clearance_m": 0.5770144406827377
+      },
+      "c284": {
+        "episodes": 100,
+        "success_rate": 0.92,
+        "success_95pct_wilson": [
+          0.8500173312059693,
+          0.9589070305141891
+        ],
+        "mean_success_time_s": 15.054347826086957,
+        "minimum_distance_violations": 0,
+        "mean_final_distance_error_m": 0.03404699838524021,
+        "evidence": "synthetic sensor simulation; not flight results",
+        "mean_time_censored_s": 17.05,
+        "successes": 92,
+        "outcomes": {
+          "success": 92,
+          "timeout": 8
+        },
+        "mean_center_error": 0.01616159515234264,
+        "mean_action_delta_sq": 0.03161364963994955,
+        "minimum_clearance_m": 0.5807089314791231
+      },
+      "c255": {
+        "episodes": 100,
+        "success_rate": 0.91,
+        "success_95pct_wilson": [
+          0.8377362530335634,
+          0.9519280048361151
+        ],
+        "mean_success_time_s": 15.304395604395605,
+        "minimum_distance_violations": 0,
+        "mean_final_distance_error_m": 0.03538324430764478,
+        "evidence": "synthetic sensor simulation; not flight results",
+        "mean_time_censored_s": 17.527,
+        "successes": 91,
+        "outcomes": {
+          "success": 91,
+          "timeout": 9
+        },
+        "mean_center_error": 0.015490888983672178,
+        "mean_action_delta_sq": 0.030142101829466375,
+        "minimum_clearance_m": 0.5751506357841608
+      },
+      "c254": {
+        "episodes": 100,
+        "success_rate": 0.91,
+        "success_95pct_wilson": [
+          0.8377362530335634,
+          0.9519280048361151
+        ],
+        "mean_success_time_s": 15.312087912087913,
+        "minimum_distance_violations": 0,
+        "mean_final_distance_error_m": 0.035607172900359245,
+        "evidence": "synthetic sensor simulation; not flight results",
+        "mean_time_censored_s": 17.534,
+        "successes": 91,
+        "outcomes": {
+          "success": 91,
+          "timeout": 9
+        },
+        "mean_center_error": 0.01585483599068397,
+        "mean_action_delta_sq": 0.029763604853816066,
+        "minimum_clearance_m": 0.5751941256457751
+      },
+      "starting": {
+        "episodes": 100,
+        "success_rate": 0.87,
+        "success_95pct_wilson": [
+          0.7901947810519012,
+          0.9224290614158575
+        ],
+        "mean_success_time_s": 18.474712643678167,
+        "minimum_distance_violations": 0,
+        "mean_final_distance_error_m": 0.06463424858324011,
+        "evidence": "synthetic sensor simulation; not flight results",
+        "mean_time_censored_s": 21.272999999999996,
+        "successes": 87,
+        "outcomes": {
+          "success": 87,
+          "timeout": 13
+        },
+        "mean_center_error": 0.01287905201627964,
+        "mean_action_delta_sq": 0.020333026894936948,
+        "minimum_clearance_m": 0.6644423083555931
+      }
+    }
+  },
+  "schema": "objectpilot-v1-16x4",
+  "control_contract": "objectpilot-control-v2",
+  "features": [
+    "ex",
+    "ey",
+    "log_size_error",
+    "visual_range_scaled",
+    "forward_range_scaled",
+    "forward_valid",
+    "range_associated",
+    "confidence",
+    "detection_valid",
+    "frame_age_scaled",
+    "range_age_scaled",
+    "ex_rate_scaled",
+    "log_size_rate_scaled",
+    "previous_forward",
+    "previous_yaw",
+    "near_sensor_required"
+  ],
+  "action_names": [
+    "forward",
+    "yaw"
+  ],
+  "config": {
+    "dt": 0.1,
+    "history": 4,
+    "stand_off_m": 0.65,
+    "minimum_m": 0.4,
+    "near_entry_m": 1.15,
+    "forward_range_max_m": 1.2,
+    "range_stale_s": 0.4,
+    "frame_stale_s": 0.35,
+    "visual_scale_m": 0.22,
+    "confidence_min": 0.45,
+    "center_gate": 0.12,
+    "vertical_gate": 0.15,
+    "arrival_x": 0.05,
+    "arrival_range_m": 0.08,
+    "arrival_hold_s": 2.0,
+    "rc_forward_cap": 20,
+    "rc_yaw_cap": 25,
+    "max_steps": 400
+  },
+  "date": "2026-10-31",
+  "git_base": "c31b41331cc7638613fc4016820eab9abddb6536",
+  "python": "3.12.16",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "versions": {
+    "numpy": "2.5.4",
+    "gymnasium": "1.4.0"
+  },
+  "workers": 16,
+  "elapsed_s": 59.4,
+  "evidence": "synthetic sensor simulation; not flight results"
+}
