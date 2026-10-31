@@ -12,7 +12,6 @@ import itertools
 import json
 import os
 import platform
-import subprocess
 import time
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
@@ -23,7 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .core import Config, PIDGains, policy_contract
+from .core import Config, PIDGains, policy_contract, repository_revision
 from .evaluate import benchmark, summarize, seed_role, check_seed_request
 
 GAIN_NAMES = ("kp_forward", "ki_forward", "kd_forward", "kp_yaw", "ki_yaw", "kd_yaw")
@@ -69,7 +68,8 @@ def run_all(candidates, config, episodes, seed, workers):
     tasks = [(name, asdict(gains), asdict(config), episodes, seed) for name, gains in candidates.items()]
     if workers <= 1:
         return dict(map(_run, tasks))
-    with ProcessPoolExecutor(max_workers=min(workers, len(tasks))) as pool:
+    # Windows process pools accept at most 61 workers; keep both CI platforms identical.
+    with ProcessPoolExecutor(max_workers=min(workers, len(tasks), 61)) as pool:
         return dict(pool.map(_run, tasks))
 
 
@@ -125,17 +125,19 @@ def main(argv=None):
     try:
         check_seed_request(a.tuning_seed, a.tuning_episodes)
         check_seed_request(a.validation_seed, a.validation_episodes)
-    except ValueError as error:
+        c = Config.from_json(a.config) if a.config else Config()
+        candidates = candidate_grid({name: getattr(a, name) for name in GAIN_NAMES})
+    except (OSError, ValueError) as error:
         p.error(str(error))
     tuning = range(a.tuning_seed, a.tuning_seed+a.tuning_episodes)
     validation = range(a.validation_seed, a.validation_seed+a.validation_episodes)
     if tuning.start < validation.stop and validation.start < tuning.stop:
         p.error("Tuning and validation seeds must not overlap")
+    # Every argument is validated before anything is written, so a failed call leaves no directory.
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=False)
-    c = Config.from_json(a.config) if a.config else Config()
+    revision = repository_revision()
     limit_s = c.max_steps*c.dt
-    candidates = candidate_grid({name: getattr(a, name) for name in GAIN_NAMES})
     started = time.perf_counter()
     tuning_rows = run_all(candidates, c, a.tuning_episodes, a.tuning_seed, a.workers)
     tuning_summaries = {name: describe(rows, limit_s) for name, rows in tuning_rows.items()}
@@ -152,7 +154,6 @@ def main(argv=None):
     for name in final_order:
         write_episodes(out/f"validation-{name}-episodes.csv", validation_rows[name])
     selected = final_order[0]
-    revision = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
     record = {
         "gains": asdict(candidates[selected]), "candidate": selected, "label": candidates[selected].label(),
         "status": "simulation candidate selected on validation seeds; not hardware calibrated",
@@ -166,7 +167,7 @@ def main(argv=None):
                        "seed_role": seed_role(a.validation_seed, a.validation_episodes),
                        "ranking": final_order, "summaries": {name: validation_summaries[name] for name in final_order}},
         **policy_contract(c),
-        "date": date.today().isoformat(), "git_base": revision.stdout.strip(),
+        "date": date.today().isoformat(), "git_base": revision,
         "python": platform.python_version(), "platform": platform.platform(),
         "versions": {name: version(name) for name in ("numpy", "gymnasium")},
         "workers": a.workers, "elapsed_s": round(time.perf_counter()-started, 1),

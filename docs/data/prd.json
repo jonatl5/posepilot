@@ -94,7 +94,7 @@
       "area": "Supervisor",
       "requirement": "Reject stale/missing detections, invalid actions, stale telemetry and near-range loss. Close raw range overrides association.",
       "priority": "Must",
-      "status": "Stale input, near-range loss, invalid state and raw proximity guards covered by software checks; simulation shows a policy can creep to the minimum clearance without hysteresis, pending a control-v3 decision"
+      "status": "Stale input, near-range loss, invalid state and raw proximity guards covered by software checks; simulation shows a policy can creep past the minimum clearance (no hysteresis, oblique range over-read and lag), pending a control-v3 decision"
     },
     {
       "id": "F10",

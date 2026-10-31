@@ -38,7 +38,7 @@ On Windows PowerShell, create the environment with `py -3.12 -m venv .venv`, the
 
 ## Tune the PID baseline and reserve the final test
 
-Scenario seeds are the simulator's only randomness, so seed ranges partition the scenarios. Seeds 10000–10029 and 20000–20029 are inspected development diagnostics. Seeds 40000–40099 tune PID gains, seeds 30000–30099 select between controllers and training seeds, and seeds 50000–50099 are reserved for the frozen final comparison: `objectpilot.evaluate` refuses them unless `--final-test` is passed at feature freeze, and `objectpilot.tune_pid` never accepts them.
+Scenario seeds are the simulator's only randomness, so seed ranges partition the scenarios. Seeds 10000–10029 and 20000–20029 are inspected development diagnostics. Seeds 40000–40099 tune PID gains, seeds 30000–30099 select between controllers and training seeds, and seeds 50000–50099 are reserved for the frozen final comparison: `objectpilot.evaluate` and `objectpilot.demo` refuse them unless `--final-test` is passed at feature freeze, and `objectpilot.tune_pid` never accepts them.
 
 ```bash
 python -m objectpilot.tune_pid --config configs/wall_approach.json --out runs/pid-tuning

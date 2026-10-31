@@ -12,7 +12,8 @@ import pytest
 from objectpilot import tune_pid
 from objectpilot.core import Detection, FeatureBuilder, PID, PIDGains, RangeSample
 from objectpilot.demo import run_demo
-from objectpilot.evaluate import benchmark, check_seed_request, seed_role, touches_final_test
+from objectpilot import evaluate
+from objectpilot.evaluate import benchmark, check_seed_request, seed_role, summarize, touches_final_test
 from objectpilot.pipeline import ApproachPipeline
 from objectpilot.replay import main as replay
 
@@ -56,6 +57,14 @@ def test_pipeline_rows_and_benchmark_report_the_gains_in_use():
     assert a['success'] and b['success'] and a['mean_action_delta_sq'] != b['mean_action_delta_sq']
 
 
+def test_summarize_counts_failed_episodes_at_the_time_limit():
+    rows = [dict(success=True, outcome='success', time_s=12.2, final_distance_error_m=.01),
+            dict(success=False, outcome='timeout', time_s=3., final_distance_error_m=.5)]
+    plain = summarize(rows)
+    assert 'mean_time_censored_s' not in plain and plain['mean_success_time_s'] == pytest.approx(12.2)
+    assert summarize(rows, 40.)['mean_time_censored_s'] == pytest.approx(26.1)
+
+
 def test_ranking_prefers_starting_gains_on_exact_ties():
     summary = dict(success_rate=1., minimum_distance_violations=0, mean_time_censored_s=10., mean_action_delta_sq=.01)
     ranked = sorted(['c001', 'starting', 'c002'], key=lambda name: tune_pid.ranking_key(name, summary))
@@ -79,7 +88,41 @@ def test_reserved_final_test_seeds_need_an_explicit_freeze_flag(tmp_path):
     assert result.returncode != 0 and 'reserved' in result.stderr and not out.exists()
     result = subprocess.run([sys.executable, '-m', 'objectpilot.evaluate', '--model', 'policy.zip', '--gains',
                              'gains.json', '--out', str(out)], capture_output=True, text=True)
-    assert result.returncode != 0 and '--gains' in result.stderr and not out.exists()
+    assert result.returncode != 0 and 'omit it when evaluating a PPO model' in result.stderr and not out.exists()
+    result = subprocess.run([sys.executable, '-m', 'objectpilot.evaluate', '--gains', str(tmp_path/'missing.json'),
+                             '--episodes', '1', '--out', str(out)], capture_output=True, text=True)
+    assert result.returncode != 0 and 'missing.json' in result.stderr and not out.exists()
+    result = subprocess.run([sys.executable, '-m', 'objectpilot.demo', '--seed', '50000',
+                             '--out', str(tmp_path/'demo50000')], capture_output=True, text=True)
+    assert result.returncode != 0 and 'reserved' in result.stderr and not (tmp_path/'demo50000').exists()
+
+
+def test_final_test_flag_is_wired_without_running_a_reserved_scenario(tmp_path, monkeypatch):
+    row = dict(seed=50000, success=True, outcome='success', time_s=10., final_clearance_m=.65,
+               final_distance_error_m=0., measured_arrival=True, truth_verified=True, mean_center_error=0.,
+               mean_action_delta_sq=0., minimum_clearance_m=.65)
+    calls = []
+    monkeypatch.setattr(evaluate, 'benchmark', lambda *args, **kwargs: (calls.append(args), [row])[1])
+    with pytest.raises(SystemExit):
+        evaluate.main(['--seed', '50000', '--episodes', '1', '--out', str(tmp_path/'refused')])
+    assert not calls and not (tmp_path/'refused').exists()
+    evaluate.main(['--seed', '50000', '--episodes', '1', '--final-test', '--out', str(tmp_path/'final')])
+    summary = json.loads((tmp_path/'final/summary.json').read_text())
+    assert len(calls) == 1 and summary['seed_role'] == 'final_test' and summary['seed_end'] == 50000
+
+
+def test_evaluate_cli_records_gains_seed_role_and_censored_time(tmp_path):
+    gains = PIDGains(kp_forward=2.)
+    gains_file = tmp_path/'gains.json'
+    gains_file.write_text(json.dumps(asdict(gains)))
+    out = tmp_path/'eval'
+    subprocess.run([sys.executable, '-m', 'objectpilot.evaluate', '--gains', str(gains_file), '--episodes', '1',
+                    '--seed', '30000', '--nominal', '--out', str(out)], check=True, capture_output=True, text=True,
+                   timeout=120)
+    summary = json.loads((out/'summary.json').read_text())
+    assert summary['controller'] == 'PID tuned gains' and summary['pid_gains'] == asdict(gains)
+    assert summary['gains_file'] == str(gains_file) and summary['seed_role'] == 'validation'
+    assert summary['seed_end'] == 30000 and 'mean_time_censored_s' in summary
 
 
 def test_demo_and_replay_accept_a_gains_file(tmp_path):
@@ -129,4 +172,8 @@ def test_tuning_ranks_on_tuning_seeds_then_selects_on_validation(tmp_path):
     with pytest.raises(SystemExit):
         tune_pid.main(['--tuning-seed', '30010', '--tuning-episodes', '5', '--workers', '1',
                        '--out', str(tmp_path/'overlap')])
-    assert not (tmp_path/'reserved').exists() and not (tmp_path/'overlap').exists()
+    with pytest.raises(SystemExit):
+        tune_pid.main(['--kp-forward', '0', '--workers', '1', '--out', str(tmp_path/'badgrid')])
+    for name in ('reserved', 'overlap', 'badgrid'):
+        assert not (tmp_path/name).exists()
+    assert record['git_base'] is None or len(record['git_base']) == 40

@@ -109,7 +109,7 @@ def summarize(rows, limit_s=None):
         summary["mean_time_censored_s"] = float(np.mean([r["time_s"] if r["success"] else limit_s for r in rows]))
     return summary
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--model")
     p.add_argument("--episodes",type=int,default=100)
@@ -120,18 +120,19 @@ def main():
     p.add_argument("--final-test", action="store_true",
                    help="Allow the reserved final test seeds 50000-50099; use once, at feature freeze")
     p.add_argument("--out",default="runs/evaluation")
-    a = p.parse_args()
+    a = p.parse_args(argv)
     if a.model and a.gains:
         p.error("--gains configures the PID baseline; omit it when evaluating a PPO model")
     try:
         check_seed_request(a.seed, a.episodes, a.final_test)
-    except ValueError as error:
+        c = Config.from_json(a.config) if a.config else Config()
+        gains = PIDGains.from_json(a.gains) if a.gains else None
+    except (OSError, ValueError) as error:
         p.error(str(error))
+    model = load_policy(a.model, c) if a.model else None
+    # Inputs are validated and loaded first, so a failed call leaves no output directory behind.
     out = Path(a.out)
     out.mkdir(parents=True,exist_ok=False)
-    c = Config.from_json(a.config) if a.config else Config()
-    gains = PIDGains.from_json(a.gains) if a.gains else None
-    model = load_policy(a.model, c) if a.model else None
     rows = benchmark(a.episodes,a.seed,model,not a.nominal,c,gains)
     with (out/"episodes.csv").open("w",newline="",encoding="utf-8") as f:
         w = csv.DictWriter(f,fieldnames=rows[0].keys()); w.writeheader(); w.writerows(rows)

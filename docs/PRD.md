@@ -99,7 +99,7 @@ Priority: Must.
 
 Reject stale/missing detections, invalid actions, stale telemetry and near-range loss. Close raw range overrides association.
 
-Current evidence: Stale input, near-range loss, invalid state and raw proximity guards covered by software checks; simulation shows a policy can creep to the minimum clearance without hysteresis, pending a control-v3 decision.
+Current evidence: Stale input, near-range loss, invalid state and raw proximity guards covered by software checks; simulation shows a policy can creep past the minimum clearance (no hysteresis, oblique range over-read and lag), pending a control-v3 decision.
 
 ### F10 · Flight gate
 
