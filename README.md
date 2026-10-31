@@ -2,7 +2,7 @@
 
 Recognize a stationary printed object on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A PC runs YOLO, a PID baseline or PPO policy, and independent supervision. The working product name is objectPilot; the repository and Pages URL remain posepilot.
 
-[Website](https://jonatl5.github.io/posepilot/) · [PRD](PRD.md) · [TT control audit](research/TT_CONTROL_AUDIT.md) · [Route comparison](research/ALIGNMENT.md) · [Control mapping](research/ARCHITECTURE.md) · [Data plan](research/DATA_COLLECTION.md) · [Hardware gates](research/HARDWARE_GATES.md)
+[Website](https://jonatl5.github.io/posepilot/) · [PRD](PRD.md) · [TT control audit](research/TT_CONTROL_AUDIT.md) · [Route comparison](research/ALIGNMENT.md) · [Control mapping](research/ARCHITECTURE.md) · [Data plan](research/DATA_COLLECTION.md) · [TT recording plan](research/RECORDING_PLAN.md) · [TT platform](research/TT_PLATFORM.md) · [Hardware gates](research/HARDWARE_GATES.md)
 
 ## One implementation route
 
@@ -17,7 +17,7 @@ The repository now includes the implementation from the team's October 29 starte
 
 These are unqualified simulation parameters, not approved physical clearances. Read the [exact feature/action contract](research/interfaces.md) and [hardware gates](research/HARDWARE_GATES.md) before any flight integration.
 
-## Run before the drone arrives
+## Run without the drone
 
 Use Python 3.10–3.13; Python 3.12 is recommended. Create an environment from this repository root:
 
@@ -56,7 +56,7 @@ python -m objectpilot.replay --source 0 --class-name bottle --weights yolo11n.pt
 python -m objectpilot.replay --source data/raw/approach.mp4 --class-name bottle --out runs/video.jsonl
 ```
 
-The first YOLO run may download pretrained weights; do this before joining aircraft Wi-Fi. Start with pretrained detection, collect a held-out wall-print benchmark and fine-tune only if the measured gap warrants it. The [English data guide](research/DATA_COLLECTION.md) covers grouped recording, explicit negatives, annotations, visual-scale calibration and detector training/evaluation. No real target dataset or new detector weights are claimed.
+The first YOLO run may download pretrained weights; do this before joining aircraft Wi-Fi. Start with pretrained detection, collect a held-out wall-print benchmark and fine-tune only if the measured gap warrants it. The [English data guide](research/DATA_COLLECTION.md) covers grouped recording, explicit negatives, annotations, visual-scale calibration and detector training/evaluation. No real target dataset or new detector weights are claimed. Now that the aircraft has arrived, footage is recorded with the TT camera through the Tello app; the [TT recording plan](research/RECORDING_PLAN.md) lists every shot, its duration and coverage, and the session order. Published TT control paths and sensor interfaces are summarized in [TT_PLATFORM.md](research/TT_PLATFORM.md).
 
 ## Grounded TT video and range
 
@@ -64,7 +64,10 @@ The first YOLO run may download pretrained weights; do this before joining aircr
 python -m pip install -e '.[markers,video,hardware]'
 python -m objectpilot.replay --source tello --detector aruco --range-mode stock --out runs/tt-ground.jsonl --show
 python -m objectpilot.bench --seconds 15 --out runs/tof-bench.jsonl
+python -m objectpilot.tof_bench --surfaces whiteboard --out runs/tof/session-whiteboard
 ```
+
+`objectpilot.tof_bench` is the labeled, motors-off forward-ToF procedure for hardware gate 3; follow [research/TOF_BENCH.md](research/TOF_BENCH.md). First TT camera measurements (YOLO11s on the cup print, k = 0.343, camera tilt about 10.5°) are in [research/TT_MEASUREMENTS.md](research/TT_MEASUREMENTS.md); use `--config configs/tt_cup_measured.json --weights models/yolo11s.pt --class-name cup` for replay on the real aircraft. `configs/wall_approach.json` remains the simulator and PPO configuration.
 
 Replay and collection never send takeoff, landing or RC commands. `GroundLink` has a strict ground-command allowlist. Stock `EXT tof?` receipts do not establish sample freshness and cannot authorize near approach or arrival. A recently received close stock value can still stop the proposed motion. Use `--range-mode custom` only after the prepared firmware's sequence/validity/age reply is qualified on the delivered hardware.
 
@@ -107,6 +110,8 @@ The imported source is identified in [source-provenance.json](research/source-pr
 | `src/objectpilot/data.py`, `collect.py`, `calibrate_camera.py` | Collection, labels, splitting, training and calibration |
 | `firmware/` | Reviewed extension generator and optional external ToF starting point |
 | `configs/wall_approach.json` | Canonical initial Config, not a flight qualification |
+| `configs/tt_cup_measured.json` | Measured TT camera values for the cup print (k, vertical gate); not flight qualified |
+| `configs/tof_bench_plan.json`, `src/objectpilot/tof_bench.py` | Forward-ToF bench plan and guided session tool |
 | `configs/pid_gains_tuned.json` | Tuned PID candidate selected on validation seeds; not hardware calibrated |
 | `research/`, `tests/` | English plans, provenance, evidence and regression checks |
 | `docs/` | GitHub Pages source, English PRD and published evidence |
