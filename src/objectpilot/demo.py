@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .core import Config, PID, PIDGains, policy_contract, rc_channels
 from .env import ApproachEnv
-from .evaluate import load_policy
+from .evaluate import check_seed_request, load_policy
 
 
 def run_demo(out, seed=10000, model_path=None, randomized=True, config=None, gains=None, gains_file=None):
@@ -63,11 +63,17 @@ def main():
     parser.add_argument("--config", help="JSON Config shared with training and camera replay")
     parser.add_argument("--gains", help="PID gains JSON for the baseline, e.g. configs/pid_gains_tuned.json; not used with --model")
     parser.add_argument("--nominal", action="store_true", help="Reduce randomization, retaining the same observation interface")
+    parser.add_argument("--final-test", action="store_true",
+                        help="Allow the reserved final test seeds 50000-50099; use once, at feature freeze")
     args = parser.parse_args()
     if args.model and args.gains:
         parser.error("--gains configures the PID baseline; omit it with --model")
-    config = Config.from_json(args.config) if args.config else Config()
-    gains = PIDGains.from_json(args.gains) if args.gains else None
+    try:
+        check_seed_request(args.seed, 1, args.final_test)
+        config = Config.from_json(args.config) if args.config else Config()
+        gains = PIDGains.from_json(args.gains) if args.gains else None
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
     summary = run_demo(args.out, args.seed, args.model, not args.nominal, config, gains, args.gains)
     print(json.dumps(summary, indent=2))
     print(f"Open {(Path(args.out) / 'demo.html').resolve()}")

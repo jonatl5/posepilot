@@ -10,6 +10,7 @@ from pathlib import Path
 import json
 import math
 import re
+import subprocess
 import numpy as np
 
 FEATURE_NAMES = (
@@ -83,6 +84,19 @@ def policy_contract(config):
     return {"schema": SCHEMA, "control_contract": CONTROL_CONTRACT,
             "features": list(FEATURE_NAMES), "action_names": list(ACTION_NAMES),
             "config": asdict(config)}
+
+def repository_revision():
+    """Git revision of this source checkout, or None without git or outside the repository."""
+    root = Path(__file__).resolve().parents[2]
+    if not (root/".git").exists():
+        return None
+    try:
+        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+                                cwd=root, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() or None if result.returncode == 0 else None
+
 
 @dataclass
 class RangeSample:

@@ -4,7 +4,7 @@ Simulation results under `objectpilot-control-v2` with `configs/wall_approach.js
 
 ## Scenario roles
 
-Development seeds 10000–10029 and 20000–20029 are the inspected diagnostics behind the earlier results. Tuning seeds 40000–40049 ranked the PID candidates. Validation seeds 30000–30099 selected the shortlist and compared every controller below. Final test seeds 50000–50099 are reserved and have not been run; `objectpilot.evaluate` refuses them without `--final-test`.
+Development seeds 10000–10029 and 20000–20029 are the inspected diagnostics behind the earlier results. Tuning seeds 40000–40049 ranked the PID candidates. Validation seeds 30000–30099 selected the shortlist and compared every controller below. Final test seeds 50000–50099 are reserved and have not been run; `objectpilot.evaluate` and `objectpilot.demo` refuse them without `--final-test`.
 
 ## Files
 
@@ -30,7 +30,7 @@ Censored mean time counts failed episodes at the 40 s limit. The validation scen
 
 ## Environment
 
-Windows 11, Python 3.12.16, numpy 2.5.4, gymnasium 1.4.0, torch 2.15.0 (CPU), stable-baselines3 2.9.2, opencv-python 4.14.0; 53 local tests passed. The `git_base` fields name the parent revision `c31b413`; the tuning tool and these files land in the recording commit. The Windows and Linux CI runs for that commit are linked from the repository once they complete.
+Windows 11, Python 3.12.16, numpy 2.5.4, gymnasium 1.4.0, torch 2.15.0 (CPU), stable-baselines3 2.9.2, opencv-python 4.14.0; 56 local tests passed. The `git_base` fields name the parent revision `c31b413`; the tuning tool and these files land in the recording commit. The Windows and Linux CI runs for that commit are linked from the repository once they complete.
 
 ## Reproduce
 

@@ -20,7 +20,7 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [ ] Fit per-print visual scale on calibration-only data and benchmark held-out detection.
 - [x] Tune PID on tuning seeds 40000–40099 and select on validation seeds 30000–30099; reserve final test seeds 50000–50099 (simulation only, see [CONTROLLER_TUNING.md](research/CONTROLLER_TUNING.md)).
 - [x] Train three control-v2 PPO seeds at two training budgets and validate them on the same 100 scenarios.
-- [ ] Decide the three simulator findings that gains cannot fix: hold resets on brief detection loss, the near-entry latch against the ToF range, and supervisor creep at the minimum clearance.
+- [ ] Decide the three simulator findings that gains cannot fix: hold resets on brief detection loss, the near-entry latch against the ToF range, and supervisor creep past the minimum clearance.
 - [ ] Re-tune gains and re-select checkpoints on a measured-response simulator; run the reserved final test once at feature freeze.
 
 ## Hardware and flight

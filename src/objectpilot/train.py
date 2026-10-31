@@ -1,6 +1,5 @@
 import argparse
 import json
-import subprocess
 from pathlib import Path
 from importlib.metadata import version
 import torch
@@ -8,7 +7,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import DummyVecEnv
 from .env import ApproachEnv
-from .core import Config, policy_contract
+from .core import Config, policy_contract, repository_revision
 
 def main():
     p = argparse.ArgumentParser()
@@ -32,11 +31,10 @@ def main():
                 ent_coef=.01, policy_kwargs={"net_arch":[64,64]}, verbose=1)
     model.learn(total_timesteps=args.steps)
     model.save(out/"policy")
-    revision = subprocess.run(["git","rev-parse","HEAD"],capture_output=True,text=True)
     metadata = {**policy_contract(c),
                 "seed":args.seed, "requested_steps":args.steps, "actual_steps":model.num_timesteps,
                 "randomized":not args.nominal, "normalization":"fixed scaling in core.py; no VecNormalize",
-                "git_base":revision.stdout.strip(), "status":"simulation candidate only",
+                "git_base":repository_revision(), "status":"simulation candidate only",
                 "versions":{n:version(n) for n in ("numpy","torch","gymnasium","stable-baselines3")}}
     (out/"metadata.json").write_text(json.dumps(metadata,indent=2),encoding="utf-8")
     env.close()
