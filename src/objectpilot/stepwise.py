@@ -143,6 +143,8 @@ class StepPlanner:
         self.squared = self.verified = False
         self.sweep, self.verify_points = [], []
         self.target_heading = self.normal_heading = self.perp_m = None
+        self.last_range = None          # (ToF, box height) of the last reading once squared or final
+        self.range_steps = 0
         self.lateral_m = 0.
         self.outcome = None
 
@@ -242,7 +244,16 @@ class StepPlanner:
         if obs.box is not None:
             self.last_ex = obs.box[0]-.5
             self.waits = 0
+            if obs.tof is not None and self.phase in ("lateral", "center", "final"):
+                self.last_range, self.range_steps = (obs.tof, obs.box[3]), 0
         return getattr(self, "_"+self.phase)(obs, obs.box)
+
+    def _beyond_range(self, box):
+        """ToF lost after drifting away: the last reading was far and the box has not grown since."""
+        if self.last_range is None or self.range_steps >= 2:
+            return False
+        tof, height = self.last_range
+        return tof >= self.c.sweep_entry_m-.15 and box[3] <= 1.05*height
 
     def _lost(self, obs):
         self.waits += 1
@@ -421,6 +432,11 @@ class StepPlanner:
                 return self._yaw_to_ex(ex, "center_yaw")
         if obs.tof is None:
             self.tof_waits += 1
+            if self.tof_waits >= 2 and self._beyond_range(box):
+                # Strafe drift can carry the aircraft past the ~1.2 m ToF range; the last
+                # reading of at least 0.95 m bounds a 20 cm step to at least 0.75 m.
+                self.tof_waits, self.range_steps = 0, self.range_steps+1
+                return self._issue("forward 20", "range_beyond_tof")
             if self.tof_waits <= 3:
                 return self._wait("range_missing")
             return self._end("range_unavailable")

@@ -1,6 +1,6 @@
 # Stop-and-go approach with SDK step commands
 
-Status, November 9, 2026: planner, geometric test world and a step calibration flight tool ([STEP_FLIGHT.md](STEP_FLIGHT.md)), rehearsed in the test world only. Nothing here has flown. The planner itself is not connected to the aircraft.
+Status, November 13, 2026: planner, geometric test world and a step calibration flight tool ([STEP_FLIGHT.md](STEP_FLIGHT.md)). The calibration flight has flown once; the planner itself is not yet connected to the aircraft.
 
 ## Idea
 
@@ -23,13 +23,15 @@ Code: `src/objectpilot/stepwise.py` (planner, deployable logic) and `src/objectp
 
 Safety rules applied on every step: a ToF reading below 0.45 m commands `back 20`; a forward step may not end closer than 0.48 m by ToF; a tall box without ToF and no sweep left ends with `range_unavailable`; a command answered with `error` is re-sent up to twice.
 
+Strafe drift can carry a squared aircraft past the ToF range during centering. In the final phase, if ToF is missing on two consecutive hovers, the last reading in the lateral, center or final phase was at least 0.95 m, and the box is no taller than 1.05 times its height at that reading, the planner steps `forward 20` (`range_beyond_tof`). It does this at most twice before a valid reading. A 20 cm step from at least 0.95 m ends at least 0.75 m from the wall. Otherwise it waits, then ends with `range_unavailable`.
+
 When ToF is valid only within 1.2 m, the sweep is the hand-over: it runs once at about 1 m, where readings beside the normal are still in range, and once more as a short check at the stand-off.
 
 ## Test world
 
 `StepWorld` projects each print's corners through a pinhole camera fitted to the cup stand clips in [TT_MEASUREMENTS.md](TT_MEASUREMENTS.md): 32° × 54° video FOV, 10.5° downward tilt, box height 0.328/d + 0.018. Against the stand clips, the model's box height is within 5% from 0.8 to 3.0 m, its width within 10%, and its vertical offset matches at 0.8, 1.0 and 2.0 m. The ToF model uses the whiteboard bench: 2 cm long head-on, 1.7–3.1 mm noise, readings beyond D/cos at oblique angles, and no reply above 1.22 m.
 
-**Assumptions not yet measured:** command accuracy (8% scale error and 3 cm cross drift per move, 3% scale and 1° per rotation, 1° heading change per move, 2% `error` replies), detection falling from 35° to 65° viewing angle, bottle and bag print sizes, and the drift of the state-stream yaw.
+**Default command accuracy** (assumed before the flight): 8% scale error and 3 cm cross drift per move, 3% scale and 1° per rotation, 1° heading change per move, 2% `error` replies. The November 13 flight measured these (see below); `--noise` replaces them. **Still assumed:** detection falling from 35° to 65° viewing angle, the bottle and third print sizes, and the drift of the state-stream yaw.
 
 ## Flight video check
 
@@ -45,7 +47,7 @@ Starts 1.5–3.2 m from the requested print, up to 50° off its normal; 40% star
 | Square-up, commanded angles only (no IMU yaw) | 95.3% | 1.9° | 2.3 cm | 22 | 46 s | 0 |
 | Yaw-center only (no sweep) | 15.0% | 22.7° | 24.2 cm | 10 | 24 s | 16 |
 | Planner FOV 10% wrong | 95.0% | 1.9° | 2.1 cm | 22 | 46 s | 0 |
-| Step errors doubled | 95.0% | 1.9° | 2.9 cm | 29 | 59 s | 0 |
+| Step errors doubled | 95.3% | 2.0° | 2.9 cm | 29 | 60 s | 0 |
 | Detection 70% as likely | 89.3% | 1.7° | 2.0 cm | 22 | 47 s | 0 |
 | ToF noise ×3, oblique error ×2 | 85.3% | 2.9° | 3.4 cm | 23 | 48 s | 0 |
 
@@ -57,6 +59,23 @@ python -m objectpilot.stepsim --episodes 300 --seed 60000 --example 60024 --plot
 
 Seeds 10000–59999 belong to the PID/PPO splits and are refused.
 
-## Next measurement: step calibration flight
+### With the measured step noise (November 13 flight)
 
-One supervised flight facing the cup print measures what the test world assumes: move scale and cross drift, rotation accuracy, heading change per move, `error` frequency, image response signs, video HFOV and ToF against heading. The procedure, safety rules and rehearsal results are in [STEP_FLIGHT.md](STEP_FLIGHT.md) (`python -m objectpilot.step_flight`). Its `noise.json` feeds `python -m objectpilot.stepsim --noise …`. Re-run this evaluation with the measured numbers before the first full approach.
+The step calibration flight ([STEP_FLIGHT.md](STEP_FLIGHT.md)) measured move scale spread 0.133, cross drift 0.11 per metre, rotation error 2.1° (in flight a fixed 2° shortfall on every turn), heading change per move 0.37° and no `error` replies, and found no ToF over-read within ±30°. With those numbers (`configs/tt_step_noise_measured.json`) on the same seeds:
+
+| Variant | Success | Final heading error (median) | Final offset (median) | Commands | Time | Below 0.40 m |
+|---|---|---|---|---|---|---|
+| Square-up (default) | 96.7% | 1.6° | 2.5 cm | 26 | 55 s | 0 |
+| Square-up, commanded angles only (no IMU yaw) | 90.3% | 2.0° | 2.8 cm | 25 | 54 s | 2 |
+| Yaw-center only (no sweep) | 16.0% | 23.1° | 26.5 cm | 11 | 27 s | 11 |
+| Detection 70% as likely | 88.0% | 1.6° | 2.3 cm | 25 | 55 s | 1 |
+
+Before the `range_beyond_tof` rule, square-up reached 95.7%: three runs squared and centered at about 1.24 m after strafe drift and stopped with `range_unavailable`. The remaining ten failures are five `not_found` (two starts beyond 3.1 m, three at 47–49° where the assumed detection falloff loses the print) and five arrivals 9.2–10.6 cm off center with 4–6° heading error, just outside the 8 cm limit. Without the state-stream yaw, measured rotation error costs six points and two clearance violations, so the flight must keep using it.
+
+```bash
+python -m objectpilot.stepsim --episodes 300 --seed 60000 --noise configs/tt_step_noise_measured.json --out runs/stepwise-measured
+```
+
+## Step calibration flight
+
+One supervised flight facing the cup print measured what the test world assumes: move scale and cross drift, rotation accuracy, heading change per move, `error` frequency, image response signs, video HFOV and ToF against heading. The procedure, safety rules and the November 13 results are in [STEP_FLIGHT.md](STEP_FLIGHT.md) (`python -m objectpilot.step_flight`). Still unmeasured: detection against viewing angle and the bottle and third print sizes.

@@ -1,0 +1,9 @@
+{
+ "move_scale_sd": 0.133,
+ "move_cross_sd": 0.11,
+ "yaw_sd_deg": 2.08,
+ "yaw_scale_sd": 0.0,
+ "move_heading_sd_deg": 0.37,
+ "fail_prob": 0.0,
+ "tof_oblique_excess": 0.0
+}

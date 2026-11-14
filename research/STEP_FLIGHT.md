@@ -1,6 +1,6 @@
 # Step calibration flight
 
-Status, November 9, 2026: written and rehearsed in the geometric test world only. It has **not** been run on the aircraft.
+Status, November 13, 2026: flown once on the delivered TT (cup print, YOLO11s); the flight completed and its numbers are below.
 
 `objectpilot.step_flight` is the only module in the repository that sends takeoff, movement and landing commands. It measures what the stop-and-go planner ([STEPWISE.md](STEPWISE.md)) and its test world assume, so the test world can be re-run with flight numbers before the first full approach.
 
@@ -48,14 +48,32 @@ Each command is followed by a 0.5 s pause and an observation: 6 video frames thr
 
 ```bash
 python -m objectpilot.step_flight rehearse --out runs/step-rehearsal
-python -m objectpilot.step_flight fly --out runs/step-cal-01 --weights models/yolo11s.pt --class-name cup
-python -m objectpilot.step_flight analyze runs/step-cal-01/flight.jsonl
-python -m objectpilot.stepsim --episodes 300 --seed 60000 --noise runs/step-cal-01/noise.json --out runs/stepwise-measured
+python -m objectpilot.step_flight fly --out runs/step-cal-02 --weights models/yolo11s.pt --class-name cup
+python -m objectpilot.step_flight analyze runs/step-cal-02/flight.jsonl
+python -m objectpilot.stepsim --episodes 300 --seed 60000 --noise runs/step-cal-02/noise.json --out runs/stepwise-measured
 ```
 
 Options: `--start-m` (taped distance, default 1.5), `--hover-m` (trial distance, 1.0), `--sweep-m` (0.8), `--height-cm` (160), `--repeats` (2), `--no-sweep`, `--mission-pad` (adds pad-relative position to the state log when a pad is within about 1.2 m below the aircraft), `--no-frames`.
 
 Outputs in the `--out` folder: `flight.jsonl` (every command, reply, observation and state packet), `frames/`, `analysis.json` (per-command table, signs, scales, sweep fit) and `noise.json` (input for `stepsim --noise`).
+
+## First flight, November 13, 2026
+
+Indoor, cup print, 160 cm flight height, default plan. The flight completed: 72 of 72 step commands answered `ok`, no aborts, about 3 minutes from takeoff to landing. Raw log, frames and analysis stay local (`runs/`); the measured noise is kept as `configs/tt_step_noise_measured.json`.
+
+| Measurement | Result |
+|---|---|
+| Image response signs | All as the planner assumes; state-stream yaw increases with `cw` |
+| Move scale (median) | forward 0.89, back 0.91, left 0.92, right 0.99, up 0.80, down 0.85: moves fall about 10% short |
+| Cross drift | median 0.7 cm, SD 3.9 cm per move; `left 40` ends about 5 cm closer to the wall, `right 40` about 4 cm farther |
+| Rotation | Every turn falls short by about 2° (`cw 10` → 8°, `cw 20` → 18°, `ccw 4` → 2°); SD 1.3° at 10° |
+| Heading change while translating | SD 0.37° |
+| Command duration | 20 cm moves 1.7–1.9 s, 40 cm 2.0–2.1 s, 10° turns 0.7–0.8 s, 40° turns 1.2–1.3 s; zero residual speed at each observation |
+| Video HFOV from turns | Median 54.2° (SD 13° per turn), matching the 54° assumption |
+| ToF sweep at 0.76 m | Wall normal 1.0° from the trial heading; readings within ±30° match D/cos to ±4%, with no over-read (bench model: +0.35·(1/cos − 1)) |
+| Vertical framing | At 160 cm the box center sat at 0.24–0.31 of the image height; `up 20` moved it to about 0.5. The print center was likely higher than 147 cm |
+
+`noise.json` from this flight: move scale SD 0.133, cross drift 0.11 per metre, rotation SD 2.08°, heading change 0.37°, no `error` replies, no ToF over-read. The fit models the fixed 2° rotation shortfall as random error, which is conservative. With these numbers the planner squares up in 96.7% of the test-world starts ([STEPWISE.md](STEPWISE.md)).
 
 ## Rehearsal in the test world
 
@@ -70,7 +88,7 @@ On one rehearsal (seed 60500), the analysis recovers the world's settings from t
 
 ## Limitations
 
-- Never connected to the aircraft. `FlightLink` reuses the `GroundLink` request path that the ToF bench exercised, but move and takeoff reply timing on the TT is unmeasured. Timeouts are 20 s for takeoff, 15 s for landing, 6 s + 2 × distance / speed for moves and 6 s + angle / 30 for turns.
+- One flight, one room, one print. Takeoff took 8.8 s and every move replied well inside its timeout. Timeouts are 20 s for takeoff, 15 s for landing, 6 s + 2 × distance / speed for moves and 6 s + angle / 30 for turns.
 - Lateral move scale uses the 54° HFOV assumption. The rotation-based HFOV check is reported alongside, so a wrong HFOV shows up as a mismatch.
 - The state-stream yaw is in whole degrees.
 - The analysis fits one parameter set for all move sizes. The planner re-observes after every step, so it needs repeatability, not exactness.

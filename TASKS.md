@@ -46,7 +46,8 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [ ] Run the ToF bench on whiteboard, cup print and dark print, then decide `forward_range_max_m`, `near_entry_m` and whether custom firmware is needed.
 - [ ] Compile/test firmware and validate sequence, sample age, invalid readings and query routing.
 - [x] Write the step calibration flight tool: allowlist, operator confirmation, abort-and-land rules, test-world rehearsal and analysis ([STEP_FLIGHT.md](research/STEP_FLIGHT.md), `objectpilot.step_flight`).
-- [ ] Fly the step calibration once and re-run `objectpilot.stepsim --noise` with its `noise.json`.
+- [x] Fly the step calibration once and re-run `objectpilot.stepsim --noise` with its `noise.json` (November 13: 72/72 commands, planner 96.7% with measured noise).
+- [ ] Screen detection against viewing angle (0–65°) and the bottle and third prints on the stand; connect `StepPlanner` to the aircraft for a supervised approach.
 - [ ] Measure physical command response, stopping drift, body/sensor offsets and battery effects.
 - [ ] Integrate one qualified flight sink, operator controls, confirmed landing and onboard link-loss behavior.
 - [ ] Complete repeated supervised PID approaches and record all failures/interventions.

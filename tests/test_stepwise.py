@@ -83,6 +83,23 @@ def test_squared_planner_strafes_toward_the_box():
     assert int(decision.command.split()[1]) <= 40
 
 
+def test_drift_past_tof_range_steps_closer_only_if_the_box_did_not_grow():
+    def squared_final():
+        planner = StepPlanner()
+        planner.phase, planner.squared, planner.verified, planner.perp_m = "final", True, True, 1.1
+        planner.decide(obs(box=(.5, .5, .1, .28), tof=1.10))      # last reading: 1.10 m, box 0.28 tall
+        return planner
+
+    planner = squared_final()
+    assert planner.decide(obs(box=(.5, .5, .1, .27))).reason == "range_missing"
+    assert planner.decide(obs(box=(.5, .5, .1, .27))).command == "forward 20"
+    closer = squared_final()
+    for _ in range(4):
+        decision = closer.decide(obs(box=(.5, .5, .1, .34)))   # box grew: closer, not beyond range
+        assert decision.command is None
+    assert decision.outcome == "range_unavailable"
+
+
 def test_failed_command_is_sent_again():
     planner = StepPlanner()
     first = planner.decide(obs(box=(.75, .5, .05, .1))).command
