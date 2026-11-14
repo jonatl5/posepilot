@@ -47,7 +47,11 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [ ] Compile/test firmware and validate sequence, sample age, invalid readings and query routing.
 - [x] Write the step calibration flight tool: allowlist, operator confirmation, abort-and-land rules, test-world rehearsal and analysis ([STEP_FLIGHT.md](research/STEP_FLIGHT.md), `objectpilot.step_flight`).
 - [x] Fly the step calibration once and re-run `objectpilot.stepsim --noise` with its `noise.json` (November 13: 72/72 commands, planner 96.7% with measured noise).
-- [ ] Screen detection against viewing angle (0–65°) and the bottle and third prints on the stand; connect `StepPlanner` to the aircraft for a supervised approach.
+- [x] Connect `StepPlanner` to the aircraft through the guarded flight session (`objectpilot.step_approach`); full-loop simulation 97.3% with measured noise ([STEP_APPROACH.md](research/STEP_APPROACH.md)).
+- [x] Fly the planner approach (November 13): 1.5 m straight and 30° to the side arrived; the oblique start over-corrected (17 fine corrections); a search among distractors missed a cup seen at frame edges below 0.45 confidence ([STEP_APPROACH.md](research/STEP_APPROACH.md)).
+- [x] Reduce over-correction and fix the search: sweep span, no verify refit, hysteresis, correction budget, step learning, 30° search with candidates, 960 px inference, strafe-clearance and overshoot-safe forward rules; stand-off 0.50 m (simulated 96.3% with flight noise).
+- [ ] Fly the changed planner: 1.5 m straight, 30° to the side, then a search with distractors.
+- [ ] Screen detection against viewing angle (0–65°) and the bottle and third prints on the stand.
 - [ ] Measure physical command response, stopping drift, body/sensor offsets and battery effects.
 - [ ] Integrate one qualified flight sink, operator controls, confirmed landing and onboard link-loss behavior.
 - [ ] Complete repeated supervised PID approaches and record all failures/interventions.

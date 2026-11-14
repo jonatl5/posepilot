@@ -2,7 +2,7 @@
 
 Status, November 13, 2026: flown once on the delivered TT (cup print, YOLO11s); the flight completed and its numbers are below.
 
-`objectpilot.step_flight` is the only module in the repository that sends takeoff, movement and landing commands. It measures what the stop-and-go planner ([STEPWISE.md](STEPWISE.md)) and its test world assume, so the test world can be re-run with flight numbers before the first full approach.
+`objectpilot.step_flight` holds `FlightSession`, the only code in the repository that sends takeoff, movement and landing commands; this calibration flight and the planner approach ([STEP_APPROACH.md](STEP_APPROACH.md)) build on it. The calibration flight measures what the stop-and-go planner ([STEPWISE.md](STEPWISE.md)) and its test world assume, so the test world can be re-run with flight numbers before the first full approach.
 
 ## What one flight measures
 
@@ -23,7 +23,7 @@ Each command is followed by a 0.5 s pause and an observation: 6 video frames thr
 
 ## Sequence (about 3.5 minutes, about 75 step commands)
 
-1. Pre-flight on the ground: `command`, `sdk?`, `battery?` (at least 50%), `speed 30`, video, state stream and ToF replies. The operator confirms the checklist by typing `fly`.
+1. Pre-flight on the ground: `command`, `sdk?`, `battery?` (at least 40%), `speed 30`, video, state stream and ToF replies. The operator confirms the checklist by typing `fly`.
 2. `takeoff`, then `up` to 160 cm by downward ToF.
 3. Yaw the box to the image center, then `forward 20` until forward ToF reads 0.9–1.1 m. While ToF has no reading, the total forward distance is limited to the taped start distance minus 1.0 m.
 4. Trials, twice: 12 opposite pairs (`left 20`/`right 20`, `forward 20`/`back 20`, `cw 10`/`ccw 10`, `left 40`/`right 40`, `cw 20`/`ccw 20`, `cw 40`/`ccw 40`, `down 20`/`up 20`, plus reversed orders). Large pairs start with the command that swings the box toward the center. Before each pair, height, distance (ToF), heading (state yaw, once its sign is measured) and lateral offset (box) are corrected with logged `correction` moves.
@@ -44,7 +44,7 @@ Each command is followed by a 0.5 s pause and an observation: 6 video frames thr
 - Indoor room with a lit, textured floor (downward positioning), propeller guards, nobody within 2 m of the path except the operator.
 - Cup print on the wall with its center about 1.47 m above the floor (13 cm below the 1.60 m flight height, as in [TT_MEASUREMENTS.md](TT_MEASUREMENTS.md)).
 - Tape mark on the floor 1.5 m from the wall, facing the print square. Clear space: 1 m on each side and behind the mark; ceiling above 2.2 m.
-- Battery at least 50%; `models/yolo11s.pt` present (download before joining aircraft Wi-Fi); laptop on `RMTT-…` Wi-Fi; Windows firewall prompt for Python allowed for UDP 8889, 8890 and 11111 ([TOF_BENCH.md](TOF_BENCH.md)); the Tello app closed.
+- Battery at least 40% (at low charge it falls about 0.5% per second in flight); `models/yolo11s.pt` present (download before joining aircraft Wi-Fi); laptop on `RMTT-…` Wi-Fi; Windows firewall prompt for Python allowed for UDP 8889, 8890 and 11111 ([TOF_BENCH.md](TOF_BENCH.md)); the Tello app closed.
 
 ```bash
 python -m objectpilot.step_flight rehearse --out runs/step-rehearsal
@@ -73,7 +73,14 @@ Indoor, cup print, 160 cm flight height, default plan. The flight completed: 72 
 | ToF sweep at 0.76 m | Wall normal 1.0° from the trial heading; readings within ±30° match D/cos to ±4%, with no over-read (bench model: +0.35·(1/cos − 1)) |
 | Vertical framing | At 160 cm the box center sat at 0.24–0.31 of the image height; `up 20` moved it to about 0.5. The print center was likely higher than 147 cm |
 
-`noise.json` from this flight: move scale SD 0.133, cross drift 0.11 per metre, rotation SD 2.08°, heading change 0.37°, no `error` replies, no ToF over-read. The fit models the fixed 2° rotation shortfall as random error, which is conservative. With these numbers the planner squares up in 96.7% of the test-world starts ([STEPWISE.md](STEPWISE.md)).
+`noise.json` from this flight, as re-estimated after the approach flights (`configs/tt_step_noise_measured.json`):
+
+- moves fall 8.7% short (`move_scale_bias`), with a spread of 10.6% around that, and cross drift of 0.11 per metre
+- every turn falls 2.0° short (`yaw_bias_deg`), with 1.04° + 3.9% around that; heading change per move is 0.37°
+- ToF has 1.3 cm of error shared by one hover's replies (`tof_obs_sd_m`, from the sweep residuals), and no over-read
+- no `error` replies
+
+The analysis now separates fixed shortfalls from spread; the first estimate folded them together (move SD 0.133, rotation SD 2.08°). With these numbers the planner squares up in 95.0% of the test-world starts ([STEPWISE.md](STEPWISE.md)). The per-hover ToF scatter is what made the planner's ±10° verify refit unreliable.
 
 ## Rehearsal in the test world
 

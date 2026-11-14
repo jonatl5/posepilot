@@ -33,15 +33,15 @@ class TargetLock:
         return chosen if self.count >= self.confirm_frames else None
 
 class YOLODetector:
-    def __init__(self, weights="yolo11n.pt", label="bottle", confidence=.45):
+    def __init__(self, weights="yolo11n.pt", label="bottle", confidence=.45, imgsz=640):
         from ultralytics import YOLO
         self.model = YOLO(weights)
-        self.label, self.confidence = label, confidence
+        self.label, self.confidence, self.imgsz = label, confidence, imgsz
         if label not in self.model.names.values():
             raise ValueError(f"Unknown class {label}; choose from {self.model.names}")
 
     def detect(self, frame, timestamp, frame_id):
-        result = self.model.predict(frame,imgsz=640,conf=self.confidence,device="cpu",verbose=False)[0]
+        result = self.model.predict(frame,imgsz=self.imgsz,conf=self.confidence,device="cpu",verbose=False)[0]
         detections = []
         for box in result.boxes:
             label = result.names[int(box.cls.item())]

@@ -1,7 +1,8 @@
 """Supervised step-response calibration flight for the stop-and-go planner.
 
-THIS MODULE FLIES THE AIRCRAFT. It is the only module in the repository that sends
-takeoff, movement or landing commands; replay, collection and the ToF bench stay
+THIS MODULE FLIES THE AIRCRAFT. FlightSession here is the only code in the repository
+that sends takeoff, movement or landing commands; this calibration flight and
+objectpilot.step_approach build on it. Replay, collection and the ToF bench stay
 ground-only. Follow the procedure in research/STEP_FLIGHT.md.
 
 One flight measures what objectpilot.stepsim assumes. The aircraft hovers square in
@@ -38,7 +39,8 @@ from .stepwise import check_command, fit_wall_normal, summarize
 MAX_MOVE_CM = 100
 MAX_TURN_DEG = 90
 FLIGHT_ONLY = frozenset(("takeoff", "land", "stop", "mon", "moff", "mdirection 0"))
-STATE_KEYS = ("yaw", "pitch", "roll", "vgx", "vgy", "vgz", "tof", "h", "bat", "baro", "mid", "x", "y", "z")
+STATE_KEYS = ("yaw", "pitch", "roll", "vgx", "vgy", "vgz", "tof", "h", "bat", "baro", "templ", "temph",
+              "mid", "x", "y", "z")
 
 # (first, second, large). Each pair returns the aircraft to where it started. A large first
 # command can push the box out of the frame, so its pair is ordered to swing the box toward
@@ -143,7 +145,7 @@ class FlightPlan:
     heading_tol_deg: float = 4.
     height_tol_cm: float = 15.
     min_tof_m: float = .55
-    min_battery_takeoff: int = 50
+    min_battery_takeoff: int = 40   # at low charge the battery falls ~0.5% per second in flight
     min_battery: int = 25
     max_seconds: float = 480.
     max_errors: int = 5
@@ -202,39 +204,45 @@ class Recorder:
         self.handle.close()
 
 
-class CalibrationFlight:
-    """Guarded step-trial sequence against an aircraft with send/observe/start/wait."""
+class FlightSession:
+    """Guarded flight shared by every flying script in this package.
+
+    Pre-flight checks, typed operator confirmation, takeoff, climb to the plan height,
+    guarded commands and observations, and abort-and-land. Subclasses implement mission(),
+    which runs after the climb and returns an outcome string.
+    """
 
     def __init__(self, aircraft, plan, recorder, clock=time.monotonic, echo=print):
         self.a, self.p, self.rec, self.clock, self.echo = aircraft, plan, recorder, clock, echo
         self.airborne = False
         self.errors = self.timeouts = self.commands = self.observations = 0
-        self.started = self.last = self.yaw0 = self.box_h0 = self.yaw_sign = None
-        self.tan_half = math.tan(math.radians(plan.hfov_deg)/2)
+        self.started = self.last = None
 
-    # -- sequence ------------------------------------------------------------------------------
+    def checklist(self):
+        return checklist(self.p)
+
+    def mission(self):
+        raise NotImplementedError
+
     def run(self, confirm):
         outcome = "completed"
         try:
             self.preflight()
-            if not confirm(checklist(self.p)):
+            if not confirm(self.checklist()):
                 return self.finish("not_confirmed")
             self.started = self.clock()
             self.airborne = True             # from here on, always try to land
-            if self.send("takeoff", "takeoff") != "ok":
-                raise Abort("takeoff_failed")
+            reply = self.send("takeoff", "takeoff")
+            if reply != "ok":
+                if reply != "timeout":
+                    # An answered refusal ("error, high temp", low battery) means the motors never
+                    # started; only a missing reply leaves the aircraft possibly airborne.
+                    self.airborne = False
+                hot = self.last["state"].get("temph") if self.last else None
+                raise Abort(f"takeoff_refused: {reply}" + (f" (board {hot:.0f} C)" if hot is not None else ""))
             self.guard(self.observe("takeoff"))
             self.climb()
-            self.approach()
-            for _ in range(self.p.repeats):
-                for first, second, large in TRIALS:
-                    self.recenter()
-                    if large:
-                        first, second = self.toward_center(first, second)
-                    self.step(first, "trial", expect_target=not large)
-                    self.step(second, "trial")
-            if self.p.sweep:
-                self.sweep()
+            outcome = self.mission() or outcome
         except Abort as stop:
             outcome = stop.reason
         except KeyboardInterrupt:
@@ -281,7 +289,140 @@ class CalibrationFlight:
             if attempt == 4:
                 raise Abort("climb_failed")
             cm = int(clamp(round(abs(diff)), 20, MAX_MOVE_CM))
-            self.step(f"{'up' if diff > 0 else 'down'} {cm}", "climb", expect_target=False)
+            self.move(f"{'up' if diff > 0 else 'down'} {cm}", "climb")
+
+    def land(self):
+        for attempt in range(5):
+            start = self.clock()
+            try:
+                if attempt == 0:
+                    self.a.send("stop", 3.)          # SDK 3.0: hover now, even mid-move
+                reply = self.a.send("land", 15.)
+            except KeyboardInterrupt:
+                self.echo("Landing; Ctrl+C is ignored until the aircraft is down.")
+                continue
+            except Exception as exc:
+                reply = f"exception {type(exc).__name__}"
+            self.rec.write(dict(event="command", kind="land", command="land", reply=reply,
+                                seconds=round(self.clock()-start, 2)))
+            self.echo(f"land -> {reply}")
+            if reply == "ok":
+                self.airborne = False
+                return True
+            self.a.wait(1.)
+        self.echo("LANDING NOT CONFIRMED. Keep clear: the aircraft lands by itself 15 s after its last command.")
+        return False
+
+    def finish(self, outcome):
+        self.rec.write(dict(event="end", outcome=outcome, commands=self.commands, errors=self.errors,
+                            timeouts=self.timeouts, observations=self.observations))
+        self.echo(f"outcome: {outcome}")
+        return outcome
+
+    # -- primitives ----------------------------------------------------------------------------
+    def query(self, command, timeout=5.):
+        reply = self.a.send(command, timeout)
+        self.rec.write(dict(event="command", kind="preflight", command=command, reply=reply, seconds=0.))
+        return reply
+
+    def note(self, text):
+        self.rec.write(dict(event="note", text=text))
+        self.echo(text)
+
+    def send(self, command, kind, **extra):
+        p = self.p
+        if command.startswith("forward ") and self.last is not None and self.last["tof_m"] is not None:
+            if self.last["tof_m"]-check_command(command)[1]/100 < p.min_tof_m:
+                raise Abort("forward_blocked")
+        start = self.clock()
+        reply = self.a.send(command, command_timeout(command, p.speed_cm_s))
+        seconds = self.clock()-start
+        self.commands += 1
+        self.rec.write(dict(event="command", kind=kind, command=command, reply=reply, seconds=round(seconds, 2),
+                            **extra))
+        elapsed = self.clock()-self.started if self.started is not None else 0.
+        self.echo(f"[{elapsed:6.1f} s] {kind:<14} {command:<11} -> {reply} ({seconds:.1f} s)")
+        if reply == "timeout":
+            self.timeouts += 1
+            self.rec.write(dict(event="command", kind="stop", command="stop", reply=self.a.send("stop", 3.),
+                                seconds=0.))
+            if self.timeouts >= p.max_timeouts:
+                raise Abort("timeouts")
+        elif reply != "ok":
+            self.errors += 1
+            if self.errors > p.max_errors:
+                raise Abort("errors")
+        return reply
+
+    def observe(self, tag):
+        raw = self.a.observe(self.p.frames)
+        state = raw["state"]
+        obs = summarize(raw["frames"], raw["tof"], self.p.label, yaw_deg=state.get("yaw"))
+        self.observations += 1
+        row = dict(event="observe", n=self.observations, tag=tag,
+                   frames=[[[d[0]]+[round(float(v), 4) for v in d[1:6]] for d in f] for f in raw["frames"]],
+                   tof=[None if r is None else round(float(r), 4) for r in raw["tof"]],
+                   tof_answered=raw["tof_answered"], state=state,
+                   box=None if obs.box is None else [round(float(v), 4) for v in obs.box],
+                   seen=round(obs.seen, 2), tof_m=None if obs.tof is None else round(float(obs.tof), 4),
+                   yaw=obs.yaw_deg, conf=None if obs.conf is None else round(float(obs.conf), 3))
+        if "truth" in raw:
+            row["truth"] = raw["truth"]
+        self.last = self.rec.write(row, raw.get("images", ()))
+        return self.last
+
+    def reobserve(self):
+        obs = self.observe("reobserve")
+        self.guard(obs)
+        return obs
+
+    def guard(self, obs):
+        p, state = self.p, obs["state"]
+        if self.started is not None and self.clock()-self.started > p.max_seconds:
+            raise Abort("time_limit")
+        if state.get("age_s") is None or state["age_s"] > p.state_stale_s:
+            raise Abort("state_stale")
+        if state.get("bat") is not None and state["bat"] < p.min_battery:
+            raise Abort("battery_low")
+        height = height_cm(state)
+        if height is None or not p.min_height_cm <= height <= p.max_height_cm:
+            raise Abort("height_out_of_bounds")
+        if obs["tof_m"] is not None and obs["tof_m"] < p.min_tof_m:
+            self.send("back 20", "safety")
+            raise Abort("too_close")
+
+    def move(self, command, kind, **extra):
+        """One guarded command, a settle pause and the observation after it: (reply, observation)."""
+        reply = self.send(command, kind, **extra)
+        self.a.wait(self.p.settle_s)
+        obs = self.observe(kind)
+        self.guard(obs)
+        box = obs["box"]
+        self.echo(f"{'':10}box {'none' if box is None else f'cx {box[0]:.3f} cy {box[1]:.3f} h {box[3]:.3f}'}"
+                  f" | ToF {obs['tof_m']} | yaw {obs['yaw']}")
+        return reply, obs
+
+
+class CalibrationFlight(FlightSession):
+    """Step-trial sequence: approach to the trial distance, opposite step pairs, ToF sweep."""
+
+    def __init__(self, aircraft, plan, recorder, clock=time.monotonic, echo=print):
+        super().__init__(aircraft, plan, recorder, clock, echo)
+        self.yaw0 = self.box_h0 = self.yaw_sign = None
+        self.tan_half = math.tan(math.radians(plan.hfov_deg)/2)
+
+    def mission(self):
+        self.approach()
+        for _ in range(self.p.repeats):
+            for first, second, large in TRIALS:
+                self.recenter()
+                if large:
+                    first, second = self.toward_center(first, second)
+                self.step(first, "trial", expect_target=not large)
+                self.step(second, "trial")
+        if self.p.sweep:
+            self.sweep()
+        return "completed"
 
     def approach(self):
         """Yaw the box to the center, then step to the trial distance by ToF."""
@@ -370,105 +511,6 @@ class CalibrationFlight:
         for command in [f"cw {deg}"]*n+[f"ccw {deg}"]*(2*n)+[f"cw {deg}"]*n:
             self.step(command, "sweep", expect_target=False)
 
-    def land(self):
-        for attempt in range(5):
-            start = self.clock()
-            try:
-                if attempt == 0:
-                    self.a.send("stop", 3.)          # SDK 3.0: hover now, even mid-move
-                reply = self.a.send("land", 15.)
-            except KeyboardInterrupt:
-                self.echo("Landing; Ctrl+C is ignored until the aircraft is down.")
-                continue
-            except Exception as exc:
-                reply = f"exception {type(exc).__name__}"
-            self.rec.write(dict(event="command", kind="land", command="land", reply=reply,
-                                seconds=round(self.clock()-start, 2)))
-            self.echo(f"land -> {reply}")
-            if reply == "ok":
-                self.airborne = False
-                return True
-            self.a.wait(1.)
-        self.echo("LANDING NOT CONFIRMED. Keep clear: the aircraft lands by itself 15 s after its last command.")
-        return False
-
-    def finish(self, outcome):
-        self.rec.write(dict(event="end", outcome=outcome, commands=self.commands, errors=self.errors,
-                            timeouts=self.timeouts, observations=self.observations))
-        self.echo(f"outcome: {outcome}")
-        return outcome
-
-    # -- primitives ----------------------------------------------------------------------------
-    def query(self, command, timeout=5.):
-        reply = self.a.send(command, timeout)
-        self.rec.write(dict(event="command", kind="preflight", command=command, reply=reply, seconds=0.))
-        return reply
-
-    def note(self, text):
-        self.rec.write(dict(event="note", text=text))
-        self.echo(text)
-
-    def send(self, command, kind):
-        p = self.p
-        if command.startswith("forward ") and self.last is not None and self.last["tof_m"] is not None:
-            if self.last["tof_m"]-check_command(command)[1]/100 < p.min_tof_m:
-                raise Abort("forward_blocked")
-        start = self.clock()
-        reply = self.a.send(command, command_timeout(command, p.speed_cm_s))
-        seconds = self.clock()-start
-        self.commands += 1
-        self.rec.write(dict(event="command", kind=kind, command=command, reply=reply, seconds=round(seconds, 2)))
-        elapsed = self.clock()-self.started if self.started is not None else 0.
-        self.echo(f"[{elapsed:6.1f} s] {kind:<14} {command:<11} -> {reply} ({seconds:.1f} s)")
-        if reply == "timeout":
-            self.timeouts += 1
-            self.rec.write(dict(event="command", kind="stop", command="stop", reply=self.a.send("stop", 3.),
-                                seconds=0.))
-            if self.timeouts >= p.max_timeouts:
-                raise Abort("timeouts")
-        elif reply != "ok":
-            self.errors += 1
-            if self.errors > p.max_errors:
-                raise Abort("errors")
-        return reply
-
-    def observe(self, tag):
-        raw = self.a.observe(self.p.frames)
-        state = raw["state"]
-        obs = summarize(raw["frames"], raw["tof"], self.p.label, yaw_deg=state.get("yaw"))
-        self.observations += 1
-        row = dict(event="observe", n=self.observations, tag=tag,
-                   frames=[[[d[0]]+[round(float(v), 4) for v in d[1:6]] for d in f] for f in raw["frames"]],
-                   tof=[None if r is None else round(float(r), 4) for r in raw["tof"]],
-                   tof_answered=raw["tof_answered"], state=state,
-                   box=None if obs.box is None else [round(float(v), 4) for v in obs.box],
-                   seen=round(obs.seen, 2), tof_m=None if obs.tof is None else round(float(obs.tof), 4),
-                   yaw=obs.yaw_deg)
-        if "truth" in raw:
-            row["truth"] = raw["truth"]
-        self.last = self.rec.write(row, raw.get("images", ()))
-        return self.last
-
-    def reobserve(self):
-        obs = self.observe("reobserve")
-        self.guard(obs)
-        return obs
-
-    def guard(self, obs):
-        p, state = self.p, obs["state"]
-        if self.started is not None and self.clock()-self.started > p.max_seconds:
-            raise Abort("time_limit")
-        if state.get("age_s") is None or state["age_s"] > p.state_stale_s:
-            raise Abort("state_stale")
-        if state.get("bat") is not None and state["bat"] < p.min_battery:
-            raise Abort("battery_low")
-        height = height_cm(state)
-        if height is None or not p.min_height_cm <= height <= p.max_height_cm:
-            raise Abort("height_out_of_bounds")
-        if obs["tof_m"] is not None and obs["tof_m"] < p.min_tof_m:
-            self.send("back 20", "safety")
-            raise Abort("too_close")
-
     def step(self, command, kind, expect_target=True, retry=True):
         """One guarded command, a settle pause and the observation after it.
 
@@ -477,13 +519,8 @@ class CalibrationFlight:
         known, a turn back to the trial heading before the flight is aborted.
         """
         before = self.last
-        reply = self.send(command, kind)
-        self.a.wait(self.p.settle_s)
-        obs = self.observe(kind)
-        self.guard(obs)
+        reply, obs = self.move(command, kind)
         box = obs["box"]
-        self.echo(f"{'':10}box {'none' if box is None else f'cx {box[0]:.3f} cy {box[1]:.3f} h {box[3]:.3f}'}"
-                  f" | ToF {obs['tof_m']} | yaw {obs['yaw']}")
         if reply not in ("ok", "timeout") and retry:
             return self.step(command, kind, expect_target, retry=False)
         if expect_target and box is None:
@@ -526,10 +563,12 @@ class CalibrationFlight:
 class TelloAircraft:
     """The delivered TT: FlightLink commands, UDP 8890 state, H.264 video and a YOLO detector."""
 
-    def __init__(self, host, weights, label, confidence=.45):
+    def __init__(self, host, weights, label, confidence=.45, imgsz=960):
         from .tof_bench import StateListener
         from .vision import YOLODetector
-        self.detector = YOLODetector(weights, label, confidence)   # load weights before any network use
+        # imgsz 960 is the TT stream width. At 640 a cup print at a frame edge 1.8 m away scored
+        # 0.16-0.43 in the November 13 search; at 960 it scored 0.36-0.60.
+        self.detector = YOLODetector(weights, label, confidence, imgsz)   # load weights before any network use
         # The first YOLO call takes seconds on a CPU; pay it here, not inside the first observation.
         self.detector.detect(np.zeros((720, 960, 3), np.uint8), 0., 0)
         self.link = FlightLink(host)
@@ -604,12 +643,16 @@ class TelloAircraft:
 class SimAircraft:
     """Rehearsal: the same flight against objectpilot.stepsim's geometric test world. No network."""
 
-    def __init__(self, seed, plan, noise=None):
+    def __init__(self, seed, plan, noise=None, pose=None):
+        """pose: (x, y, heading_rad) start on the floor; default: square in front of the print at start_m."""
         from .stepsim import StepWorld, default_prints
         rng = np.random.default_rng(seed)
         prints = default_prints()
         target = next(t for t in prints if t.label == plan.label)
-        pose = (-plan.start_m, target.y+rng.normal(0, .05), 0., math.radians(rng.normal(0, 3)))
+        if pose is None:
+            pose = (-plan.start_m, target.y+rng.normal(0, .05), math.radians(rng.normal(0, 3)))
+        pose = (pose[0], pose[1], 0., pose[2])
+        self.target = target
         self.world = StepWorld(rng, pose, prints, noise=noise, frames=plan.frames, speed_cm_s=plan.speed_cm_s)
         self.rng, self.airborne, self.battery = rng, False, 88.
 
@@ -759,10 +802,17 @@ def sweep_analysis(rows, yaw_sign):
         by_angle.setdefault(int(round(angle/10)*10), []).append(round(ratio, 3))
         if abs(angle) >= 15:
             excess.append((ratio-1)/(1/math.cos(math.radians(angle))-1))
+    scatter = None
+    if distance is not None and len(finite) >= 4:
+        k = clamp(statistics.median(excess), 0., 2.) if excess else 0.
+        residuals = [r-distance/math.cos(math.radians(h-normal))*(1+k*(1/math.cos(math.radians(h-normal))-1))
+                     for h, r in finite if abs(h-normal) <= 30]
+        scatter = statistics.stdev(residuals) if len(residuals) >= 3 else None
     result = dict(points=len(points), finite=len(finite), normal_offset_deg=round(normal, 1),
                   perpendicular_m=None if distance is None else round(distance, 3),
                   ratio_to_d_over_cos=dict(sorted(by_angle.items())),
                   oblique_excess=round(statistics.median(excess), 3) if excess else None,
+                  scatter_m=None if scatter is None else round(scatter, 4),
                   out_of_range_beyond_deg=min((abs(h) for h, r in points if not math.isfinite(r)), default=None))
     if "truth" in reference:
         result["true_normal_offset_deg"] = round(-reference["truth"]["heading_deg"], 1)
@@ -824,14 +874,19 @@ def analyze(rows, hfov_deg=54.):
     noise = {}
     horizontal = [v for verb in HORIZONTAL for v in scale.get(verb, [])]
     if len(horizontal) >= 4:
-        noise["move_scale_sd"] = round(rms([v-1 for v in horizontal]), 3)
+        # A fixed shortfall is kept apart from the spread around it.
+        centre = statistics.median(horizontal)
+        noise["move_scale_bias"] = round(centre-1, 3)
+        noise["move_scale_sd"] = round(rms([v-centre for v in horizontal]), 3)
     if len(cross) >= 4:
         # stepsim draws cross drift with sd 0.01 m + move_cross_sd * move length.
         mean_m = statistics.mean(m for m, _ in cross)
         noise["move_cross_sd"] = round(max(0., (rms([c for _, c in cross])-.01)/mean_m), 3)
     if len(rotation) >= 4:
         values = np.array([v for v, _ in rotation], float)
-        errors = np.array([e for _, e in rotation], float)
+        shortfall = -float(np.median([e for _, e in rotation]))
+        noise["yaw_bias_deg"] = round(shortfall, 2)
+        errors = np.array([e for _, e in rotation], float)+shortfall
         if len(set(values)) >= 2:
             a, b = np.linalg.lstsq(np.c_[np.ones_like(values), values**2], errors**2, rcond=None)[0]
             noise["yaw_sd_deg"], noise["yaw_scale_sd"] = round(math.sqrt(max(a, 0.)), 2), round(math.sqrt(max(b, 0.)), 3)
@@ -843,6 +898,9 @@ def analyze(rows, hfov_deg=54.):
         noise["fail_prob"] = round(sum(s["reply"] != "ok" for s in samples)/len(samples), 3)
     if sweep and sweep.get("oblique_excess") is not None:
         noise["tof_oblique_excess"] = round(clamp(sweep["oblique_excess"], 0., 2.), 3)
+    if sweep and sweep.get("scatter_m") is not None:
+        # Per-hover scatter beyond the per-reply sensor noise stepsim already draws (about 2 mm per hover).
+        noise["tof_obs_sd_m"] = round(math.sqrt(max(0., sweep["scatter_m"]**2-.002**2)), 4)
 
     end = next((r for r in reversed(rows) if r["event"] == "end"), {})
     return dict(outcome=end.get("outcome"), step_commands=len(samples), ok=len(ok), hfov_assumed_deg=hfov_deg,
@@ -901,6 +959,7 @@ def main(argv=None):
     rehearse.add_argument("--seed", type=int, default=60500)
     fly.add_argument("--weights", default="models/yolo11s.pt")
     fly.add_argument("--confidence", type=float, default=.45)
+    fly.add_argument("--imgsz", type=int, default=960, help="YOLO input width (TT video is 960x720)")
     fly.add_argument("--host", default="192.168.10.1")
     fly.add_argument("--mission-pad", action="store_true", help="enable downward mission-pad detection (mon)")
     fly.add_argument("--no-frames", action="store_true", help="do not save observed frames as JPEG")
@@ -934,7 +993,7 @@ def main(argv=None):
         return 0
     if not sys.stdin.isatty():
         parser.error("fly needs an interactive terminal for the pre-flight confirmation")
-    aircraft = TelloAircraft(a.host, a.weights, plan.label, a.confidence)
+    aircraft = TelloAircraft(a.host, a.weights, plan.label, a.confidence, a.imgsz)
     recorder = None
     try:
         recorder = Recorder(a.out, save_frames=not a.no_frames)

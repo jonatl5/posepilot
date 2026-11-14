@@ -46,6 +46,7 @@ class StepObservation:
     seen: float                # share of frames in which the label was detected
     tof: float | None          # median valid forward ToF in metres, bench offset removed
     yaw_deg: float | None = None  # IMU yaw from the SDK state stream (port 8890), if available
+    conf: float | None = None     # median detector confidence of the chosen boxes
 
 
 def summarize(frames, tof_replies, label, min_seen=.5, min_tof_valid=.5, tof_offset_m=.02, yaw_deg=None):
@@ -55,18 +56,21 @@ def summarize(frames, tof_replies, label, min_seen=.5, min_tof_valid=.5, tof_off
     tof_replies: forward ToF readings in metres, None for out-of-range or failed replies.
     yaw_deg: the state stream's yaw after the hover, passed through unchanged.
     """
-    boxes = []
+    boxes, confs = [], []
     for detections in frames:
         own = [d for d in detections if d[0] == label]
         if own:
-            boxes.append(max(own, key=lambda d: d[5])[1:5])
+            best = max(own, key=lambda d: d[5])
+            boxes.append(best[1:5])
+            confs.append(best[5])
     seen = len(boxes)/max(1, len(frames))
     box = tuple(statistics.median(b[i] for b in boxes) for i in range(4)) if seen >= min_seen else None
+    conf = statistics.median(confs) if box is not None else None
     valid = [r for r in tof_replies if r is not None]
     tof = None
     if tof_replies and len(valid)/len(tof_replies) >= min_tof_valid:
         tof = statistics.median(valid) - tof_offset_m
-    return StepObservation(box, seen, tof, yaw_deg)
+    return StepObservation(box, seen, tof, yaw_deg, conf)
 
 
 def fit_wall_normal(points, around, search_deg=12.):
@@ -95,13 +99,17 @@ class StepConfig:
     stand_off_m: float = .65
     minimum_m: float = .40
     forward_margin_m: float = .08   # a forward step may not end closer than minimum + margin
+    forward_overshoot: float = 1.3  # ... nor closer than minimum + 3 cm if it overshoots by this factor
     sweep_entry_m: float = 1.10     # run the wall-normal sweep once ToF reads this or less
     sweep_box_h: float = .26        # box this tall without ToF: one more 20 cm step, then sweep
     near_box_h: float = .33         # box this tall without ToF and no sweep left: stop
     sweep_deg: int = 10
     sweep_limit_deg: float = 70.
-    verify_deg: int = 10            # re-check sweep at the stand-off; 0 disables it
-    search_deg: int = 40            # below the 54 degree field of view, so views overlap
+    sweep_span_deg: float = 20.     # fit the normal on readings reaching this far on both sides of the minimum
+    verify_deg: int = 0             # re-check sweep at the stand-off; 0 disables it (see STEPWISE.md)
+    search_deg: int = 30            # a target is always within 15 degrees of some view's center
+    confirm_conf: float = .45       # a search candidate must reach this once centered; weaker boxes are candidates
+    candidate_checks: int = 2       # centered looks at a weak candidate before it is rejected
     center_x: float = .05           # yaw-centering tolerance before stepping forward
     lateral_tol_m: float = .04
     max_strafe_m: float = .40       # longer strafes are split and re-checked
@@ -109,6 +117,10 @@ class StepConfig:
     arrival_range_m: float = .05
     arrival_x: float = .06          # centering tolerance when the aircraft is not squared
     hold_observations: int = 3      # consecutive in-tolerance hovers (about 1.8 s)
+    hold_slack: float = 1.4         # once holding, tolerances widen by this factor (hysteresis)
+    fine_budget: int = 3            # small corrections per axis before its tolerance widens
+    budget_widen: float = 1.5       # tolerance factor once the fine budget is spent
+    learn_steps: bool = True        # measure and compensate move and turn shortfall in flight
     vertical_limit: float = .33     # |cy - 0.5| that triggers one 20 cm climb or descent
     max_commands: int = 90
     max_observations: int = 250
@@ -138,7 +150,7 @@ class StepPlanner:
         self.queue = []
         self.commands = self.observations = self.retries = 0
         self.search_turned = self.lost_turns = self.waits = self.tof_waits = 0
-        self.vertical_moves = self.square_attempts = self.blind_steps = self.hold = 0
+        self.vertical_moves = self.square_attempts = self.blind_steps = self.hold = self.lost_backoffs = 0
         self.last_ex = 0.
         self.squared = self.verified = False
         self.sweep, self.verify_points = [], []
@@ -146,13 +158,38 @@ class StepPlanner:
         self.last_range = None          # (ToF, box height) of the last reading once squared or final
         self.range_steps = 0
         self.lateral_m = 0.
+        self.pending = self.current_tof = None
+        self.turn_shortfalls, self.move_scales, self.rejected = [], [], []
+        self.candidate_looks = self.fine_steps = self.center_steps = 0
+        self.reached_final = False
         self.outcome = None
 
     # -- outputs ---------------------------------------------------------------
     def _issue(self, command, reason):
-        check_command(command)
+        verb, value = check_command(command)
         self.commands += 1
+        self.pending = (verb, value, self.heading, self.current_tof)
         return Decision(command, self.phase, reason)
+
+    # -- step compensation learned in flight (November 13: moves ~9% short, turns ~2 degrees short) --
+    def _turn_bias(self):
+        recent = self.turn_shortfalls[-6:]
+        return min(4., max(0., statistics.median(recent))) if len(recent) >= 2 else 0.
+
+    def _move_scale(self):
+        recent = self.move_scales[-6:]
+        return min(1.25, max(.75, statistics.median(recent))) if len(recent) >= 2 else 1.
+
+    def _learn(self, obs):
+        pending, self.pending = self.pending, None
+        if pending is None or not self.c.learn_steps:
+            return
+        verb, value, heading, tof = pending
+        if verb in ("cw", "ccw") and obs.yaw_deg is not None and value >= 5:
+            self.turn_shortfalls.append(value-abs(self.heading-heading))
+        elif verb in ("forward", "back") and self.squared and tof is not None and obs.tof is not None:
+            moved = tof-obs.tof if verb == "forward" else obs.tof-tof
+            self.move_scales.append(moved/(value/100))
 
     def _wait(self, reason):
         return Decision(None, self.phase, reason)
@@ -163,7 +200,7 @@ class StepPlanner:
         return Decision(None, self.phase, outcome, outcome)
 
     def _yaw(self, degrees, reason):
-        n = max(1, min(360, round(abs(degrees))))
+        n = max(1, min(360, round(abs(degrees)+self._turn_bias())))
         return self._issue(f"{'cw' if degrees > 0 else 'ccw'} {n}", reason)
 
     def _yaw_to_ex(self, ex, reason):
@@ -172,29 +209,41 @@ class StepPlanner:
     def _sideways(self, metres, reason):
         """Strafe right for positive metres. Below 20 cm: overshoot by 20 cm, then return."""
         verb = "right" if metres > 0 else "left"
-        cm = round(abs(metres)*100)
+        cm = round(abs(metres)*100/self._move_scale())
         if cm >= 20:
             return self._issue(f"{verb} {min(cm, 500)}", reason)
         self.queue.append(f"{OPPOSITE[verb]} 20")
         return self._issue(f"{verb} {cm+20}", reason)
 
     def _needs_clearance(self, obs, metres):
-        return abs(metres) >= .20 and obs.tof is not None and obs.tof < self.c.strafe_clearance_m-.05
+        # Every strafe has a leg of at least 20 cm (small ones overshoot and return), and strafe
+        # drift plus a few degrees of heading error carry it toward the wall: strafe only from
+        # strafe_clearance_m. In flight-noise simulation a 31 cm overshoot leg from 0.53 m ended at 0.38 m.
+        return obs.tof is not None and obs.tof < self.c.strafe_clearance_m-.05
+
+    def _safe_forward_m(self, tof):
+        """Longest forward step that ends at minimum + margin, and at minimum + 3 cm even if it
+        overshoots by forward_overshoot (flight spread: SD 11%; a 45 cm step moved 58 cm in simulation)."""
+        c = self.c
+        return min(tof-c.minimum_m-c.forward_margin_m, (tof-c.minimum_m-.03)/c.forward_overshoot)
 
     def _back_off(self, obs):
         return self._issue(f"back {max(20, round((self.c.strafe_clearance_m-obs.tof)*100))}",
                            "clear_before_strafe")
 
     def _forward(self, obs, metres, reason):
+        # Compensate the learned shortfall, but never command beyond the safe step.
+        command = metres/self._move_scale()
         if obs.tof is not None:
-            metres = min(metres, obs.tof-self.c.minimum_m-self.c.forward_margin_m)
-        if metres < .20:
+            command = min(command, self._safe_forward_m(obs.tof))
+        if command < .20:
             return self._wait("no_safe_forward_step")
-        return self._issue(f"forward {min(500, round(metres*100))}", reason)
+        return self._issue(f"forward {min(500, round(command*100))}", reason)
 
     def applied(self, command, reply):
         """Call after the aircraft replies: "error" re-queues the command, "ok" rotations update the heading."""
         if reply != "ok":
+            self.pending = None
             if self.retries < self.c.max_retries:
                 self.retries += 1
                 self.queue.insert(0, command)
@@ -229,21 +278,22 @@ class StepPlanner:
             if self.last_yaw is not None:
                 self.heading = self.imu_heading+(obs.yaw_deg-self.last_yaw+180) % 360-180
             self.last_yaw, self.imu_heading = obs.yaw_deg, self.heading
+        self._learn(obs)
+        self.current_tof = obs.tof
         if obs.tof is not None and obs.tof < c.minimum_m+.05:
             self.queue.clear()
             return self._issue("back 20", "too_close")
         if self.queue:
             command = self.queue.pop(0)
             verb, value = check_command(command)
-            if not (verb == "forward" and obs.tof is not None
-                    and obs.tof-value/100 < c.minimum_m+.05):
+            if not (verb == "forward" and obs.tof is not None and value/100 > self._safe_forward_m(obs.tof)):
                 return self._issue(command, "queued")
             self.queue.clear()
         if self.commands >= c.max_commands or self.observations >= c.max_observations:
             return self._end("timeout")
         if obs.box is not None:
             self.last_ex = obs.box[0]-.5
-            self.waits = 0
+            self.waits = self.lost_backoffs = 0
             if obs.tof is not None and self.phase in ("lateral", "center", "final"):
                 self.last_range, self.range_steps = (obs.tof, obs.box[3]), 0
         return getattr(self, "_"+self.phase)(obs, obs.box)
@@ -256,6 +306,13 @@ class StepPlanner:
         return tof >= self.c.sweep_entry_m-.15 and box[3] <= 1.05*height
 
     def _lost(self, obs):
+        if (self.phase in ("center", "final") and obs.tof is not None and obs.tof < self.c.stand_off_m
+                and self.lost_backoffs < 2):
+            # Lost inside the stand-off: an overshoot puts the print partly out of the frame,
+            # and turning away from it there cannot find it again. Back off first.
+            self.lost_backoffs += 1
+            self.queue.clear()
+            return self._issue("back 20", "lost_close_back_off")
         self.waits += 1
         if self.waits <= 2:
             return self._wait("target_missing")
@@ -278,8 +335,24 @@ class StepPlanner:
         return None
 
     def _search(self, obs, box):
+        c = self.c
+        if box is not None and obs.conf is not None and obs.conf < c.confirm_conf:
+            # Weak detection (small, at the frame edge or oblique): center it, then require
+            # confirm_conf. A rejected candidate's bearing is skipped for the rest of the search.
+            ex = box[0]-.5
+            bearing = self.heading+math.degrees(math.atan(2*ex*self.tan_half))
+            if any(abs((bearing-h+180) % 360-180) < 10 for h in self.rejected):
+                box = None
+            elif abs(ex) > c.center_x:
+                return self._yaw_to_ex(ex, "search_candidate")
+            else:
+                self.candidate_looks += 1
+                if self.candidate_looks < c.candidate_checks:
+                    return self._wait("search_candidate")
+                self.rejected.append(bearing)
+                self.candidate_looks, box = 0, None
         if box is not None:
-            self.phase, self.search_turned, self.lost_turns = "face", 0, 0
+            self.phase, self.search_turned, self.lost_turns, self.candidate_looks = "face", 0, 0, 0
             return self._face(obs, box)
         if self.search_turned >= 360:
             return self._end("not_found")
@@ -344,6 +417,15 @@ class StepPlanner:
                 # Readings beside the minimum drop out: too far for a reliable fit. Approach, retry.
                 self.blind_steps = 0
                 return self._abort_sweep()
+            # Near the minimum D/cos is flat (1.5% at 10 degrees, below the ~1.3 cm per-hover ToF
+            # scatter measured in flight); widen the sweep so the fit sees the curvature.
+            low, high = points[0][0], points[-1][0]
+            if (high-best_heading < c.sweep_span_deg-2 and math.isfinite(points[-1][1])
+                    and abs(high+c.sweep_deg-self.target_heading) <= c.sweep_limit_deg):
+                return self._yaw(high+c.sweep_deg-self.heading, "sweep_span")
+            if (best_heading-low < c.sweep_span_deg-2 and math.isfinite(points[0][1])
+                    and abs(low-c.sweep_deg-self.target_heading) <= c.sweep_limit_deg):
+                return self._yaw(low-c.sweep_deg-self.heading, "sweep_span")
             self.normal_heading, self.perp_m = fit_wall_normal(points, best_heading)
             self.squared = True
             self.lateral_m = self.perp_m*math.tan(math.radians(self.target_heading-self.normal_heading))
@@ -389,12 +471,23 @@ class StepPlanner:
         if hold:
             return hold
         error = self._lateral_error(obs, box)
-        if abs(error) > c.lateral_tol_m:
+        if abs(error) > self._lateral_tol():
             if self._needs_clearance(obs, error):
                 return self._back_off(obs)
+            if self.reached_final:
+                self.center_steps += 1
             return self._sideways(max(-c.max_strafe_m, min(c.max_strafe_m, error)), "center_lateral")
         self.phase = "final"
         return self._final(obs, box)
+
+    def _lateral_tol(self, holding=False):
+        """Lateral tolerance: wider while holding (hysteresis) and after fine_budget corrections."""
+        c = self.c
+        return c.lateral_tol_m*(c.hold_slack if holding else 1.)*(c.budget_widen if self.center_steps >= c.fine_budget else 1.)
+
+    def _range_tol(self, holding=False):
+        c = self.c
+        return c.arrival_range_m*(c.hold_slack if holding else 1.)*(c.budget_widen if self.fine_steps >= c.fine_budget else 1.)
 
     def _verify(self, obs, box):
         """At the stand-off: readings at 0, +d and -d degrees refit the wall normal."""
@@ -417,12 +510,13 @@ class StepPlanner:
         c = self.c
         if box is None:
             return self._lost(obs)
+        self.reached_final = True
         if self.squared:
             hold = self._hold_heading()
             if hold:
                 self.hold = 0
                 return hold
-            if abs(self._lateral_error(obs, box)) > c.lateral_tol_m+.02:
+            if abs(self._lateral_error(obs, box)) > self._lateral_tol(holding=True):
                 self.phase, self.hold = "center", 0
                 return self._center(obs, box)
         else:
@@ -442,7 +536,7 @@ class StepPlanner:
             return self._end("range_unavailable")
         self.tof_waits = 0
         error = obs.tof-c.stand_off_m
-        if abs(error) <= c.arrival_range_m:
+        if abs(error) <= self._range_tol(holding=self.hold > 0):
             if self.squared and c.verify_deg and not self.verified:
                 self.phase, self.verify_points, self.hold = "verify", [], 0
                 return self._verify(obs, box)
@@ -451,12 +545,15 @@ class StepPlanner:
                 return self._end("arrived")
             return self._wait("arrival_hold")
         self.hold = 0
+        if abs(error) < .25:
+            self.fine_steps += 1
         if error >= .40:
             return self._forward(obs, min(.40, error-.20), "final_approach")
         if error >= .20:
             return self._forward(obs, error, "final_approach")
-        # Less than one 20 cm step: always move away from the wall first.
-        cm = round(abs(error)*100)
+        # Less than one 20 cm step: always move away from the wall first. Both legs fall short
+        # by the learned scale s, so the net move s*(a-b) is set to the error.
+        cm = round(abs(error)*100/self._move_scale())
         if error > 0:
             self.queue.append(f"forward {cm+20}")
             return self._issue("back 20", "final_fine")
