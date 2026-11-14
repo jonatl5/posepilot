@@ -1,132 +1,410 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1435ee">
-  <meta name="description" content="objectPilot: object detection, forward ToF sensing and learned control on RoboMaster TT. Explore our rapid prototypes, recorded simulation and current results.">
-  <meta property="og:title" content="objectPilot — Rapid prototypes">
-  <meta property="og:description" content="From a printed target to a measured stand-off. Explore the perception pipeline, PID/PPO simulation and ESP32 sensor prototype.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://jonatl5.github.io/posepilot/">
-  <link rel="canonical" href="https://jonatl5.github.io/posepilot/">
-  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=prototype-2">
-  <script src="./app.js?v=prototype-2" defer></script>
-  <title>objectPilot — Rapid prototypes</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>objectPilot — a RoboMaster TT that flies to the picture you name</title>
+<meta name="description" content="objectPilot flies a RoboMaster TT to a printed picture on a wall and stops square in front of it: YOLO11s, forward ToF and a stop-and-go SDK step planner. Status, flights and results as of November 13, 2026.">
+<meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./site.css?v=2026-11-13">
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
-  <header class="header"><div class="header-inner">
-    <a class="brand" href="#top" aria-label="objectPilot home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>objectPilot<span class="brand-tag">RESEARCH</span></a>
-    <nav class="nav" aria-label="Main navigation"><a href="#prototypes">Rapid prototypes</a><a href="#architecture">System</a><a href="./prd.html">PRD</a><a href="#roadmap">Roadmap</a><a href="./log.html">Progress</a></nav>
-    <div class="header-actions"><a class="repo-link" href="https://github.com/jonatl5/posepilot">GitHub ↗</a></div>
-  </div></header>
-  <main id="main">
-    <section class="hero section-wrap" id="top">
-      <div class="hero-copy">
-        <div class="eyebrow"><span class="small-line"></span> CAPSTONE / ROBOMASTER TT</div>
-        <h1>Recognize.<br>Approach.<br><span class="blue">Keep a distance.</span></h1>
-        <p class="hero-description">A printed object on a wall. A drone that centers it and approaches a measured stand-off. We combine object detection, forward infrared ToF and a PID or learned PPO controller.</p>
-        <div class="hero-buttons"><a class="button primary" href="#prototypes">Explore the prototypes ↓</a><a class="button secondary" href="./prd.html">Read the PRD ↗</a></div>
-        <div class="project-status"><span class="status-square" aria-hidden="true"></span><span>Pre-hardware prototype · updated October 29, 2026<br>Software tested locally. Flight validation comes next.</span></div>
-        <div class="hero-meta"><span>YOLO11n</span><span>FORWARD ToF</span><span>PID + PPO</span></div>
+<a class="skip" href="#main">Skip to content</a>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="objectPilot home"><img src="./favicon.svg" alt="" width="26" height="26">objectPilot</a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#status">Status</a>
+      <a href="#architecture">How it works</a>
+      <a href="#results">Flights</a>
+      <a href="#simulation">Fixes</a>
+      <a href="#roadmap">Timeline</a>
+      <a href="#prototypes">Archive</a>
+    </nav>
+    <a class="gh" href="https://github.com/jonatl5/posepilot">GitHub ↗</a>
+  </div>
+</header>
+
+<main id="main">
+<section class="wrap hero" id="top">
+  <div>
+    <p class="eyebrow">Capstone · RoboMaster TT · updated November 13, 2026</p>
+    <h1>Name an object. <span class="soft">The drone finds its picture and stops in front of it.</span></h1>
+    <p class="lede">objectPilot flies a RoboMaster TT to a printed picture on a wall and stops square in front of it, 0.50 m away. The laptop runs YOLO11s on the drone's video, reads the forward ToF sensor, and after every hover chooses <em>one</em> SDK move.</p>
+    <ul class="chips" aria-label="Components">
+      <li>RoboMaster TT</li><li>YOLO11s at 960 px</li><li>Forward ToF, 1.2 m</li><li>Stop-and-go SDK steps</li><li>Wall-normal sweep</li>
+    </ul>
+    <div class="actions">
+      <a class="btn primary" href="#status">Where we are ↓</a>
+      <a class="btn" href="https://github.com/jonatl5/posepilot/blob/main/research/STEP_APPROACH.md">Flight procedure ↗</a>
+    </div>
+  </div>
+  <figure class="hero-figure">
+    <svg viewBox="0 0 450 400" role="img" aria-labelledby="hero-t hero-d">
+<title id="hero-t">Simulated top view of one approach</title>
+<desc id="hero-d">The drone starts 1.5 m from the wall and 1 m to the side, facing away; it searches, approaches, sweeps, strafes to square up and stops 0.50 m in front of the cup print.</desc>
+<rect class="wall" x="0" y="40" width="450" height="16" rx="3"/>
+<text class="tick" x="8" y="52">wall</text>
+<rect class="print target" x="85.2" y="49" width="48.5" height="7" rx="1.5"/>
+<text class="lbl" x="109.5" y="72" text-anchor="middle">cup print</text>
+<rect class="print" x="338.3" y="49" width="42.5" height="7" rx="1.5"/>
+<text class="lbl" x="359.5" y="72" text-anchor="middle">other print</text>
+<line class="standoff" x1="27" x2="417" y1="154" y2="154"/>
+<text class="tick" x="417" y="148" text-anchor="end">0.50 m stand-off</text>
+<polyline class="path-line" points="368.5,353.5 377,355.1 296.8,289.2 284.8,261 252.2,237.7 217.2,209.5 210,211.4 221.2,207.5 184.2,207.9 128.5,202.2 71.8,203.6 113.8,195.9 111.2,161.6 111.5,197.3 98,148.7 121,197.7 120.5,154.2"/>
+<g><circle class="hit" cx="368.5" cy="353.5" r="12" data-tip="1.52 m from the wall|+1.04 m sideways · climb|commands here: up 73, up 20, cw 30"/><circle class="dot" cx="368.5" cy="353.5" r="4"/></g>
+<g><circle class="hit" cx="377" cy="355.1" r="12" data-tip="1.53 m from the wall|+1.07 m sideways · search|commands here: cw 30, cw 8"/><circle class="dot" cx="377" cy="355.1" r="4"/></g>
+<g><circle class="hit" cx="296.8" cy="289.2" r="12" data-tip="1.19 m from the wall|+0.75 m sideways · face|commands here: forward 40, cw 6"/><circle class="dot" cx="296.8" cy="289.2" r="4"/></g>
+<g><circle class="hit" cx="284.8" cy="261" r="12" data-tip="1.05 m from the wall|+0.70 m sideways · face|commands here: forward 20, cw 21, cw 13, ccw 36"/><circle class="dot" cx="284.8" cy="261" r="4"/></g>
+<g><circle class="hit" cx="252.2" cy="237.7" r="12" data-tip="0.93 m from the wall|+0.57 m sideways · face|commands here: forward 20"/><circle class="dot" cx="252.2" cy="237.7" r="4"/></g>
+<g><circle class="hit" cx="217.2" cy="209.5" r="12" data-tip="0.78 m from the wall|+0.43 m sideways · face|commands here: forward 20, cw 7, cw 12, cw 11"/><circle class="dot" cx="217.2" cy="209.5" r="4"/></g>
+<g><circle class="hit" cx="210" cy="211.4" r="12" data-tip="0.79 m from the wall|+0.40 m sideways · sweep|commands here: cw 11, cw 12, cw 13"/><circle class="dot" cx="210" cy="211.4" r="4"/></g>
+<g><circle class="hit" cx="221.2" cy="207.5" r="12" data-tip="0.77 m from the wall|+0.45 m sideways · lateral|commands here: ccw 22"/><circle class="dot" cx="221.2" cy="207.5" r="4"/></g>
+<g><circle class="hit" cx="184.2" cy="207.9" r="12" data-tip="0.78 m from the wall|+0.30 m sideways · lateral|commands here: left 21"/><circle class="dot" cx="184.2" cy="207.9" r="4"/></g>
+<g><circle class="hit" cx="128.5" cy="202.2" r="12" data-tip="0.75 m from the wall|+0.08 m sideways · center|commands here: left 24"/><circle class="dot" cx="128.5" cy="202.2" r="4"/></g>
+<g><circle class="hit" cx="71.8" cy="203.6" r="12" data-tip="0.75 m from the wall|-0.15 m sideways · center|commands here: left 24"/><circle class="dot" cx="71.8" cy="203.6" r="4"/></g>
+<g><circle class="hit" cx="113.8" cy="195.9" r="12" data-tip="0.71 m from the wall|+0.02 m sideways · center|commands here: right 20"/><circle class="dot" cx="113.8" cy="195.9" r="4"/></g>
+<g><circle class="hit" cx="111.2" cy="161.6" r="12" data-tip="0.54 m from the wall|+0.01 m sideways · final|commands here: forward 20"/><circle class="dot" cx="111.2" cy="161.6" r="4"/></g>
+<g><circle class="hit" cx="111.5" cy="197.3" r="12" data-tip="0.72 m from the wall|+0.01 m sideways · final|commands here: back 20"/><circle class="dot" cx="111.5" cy="197.3" r="4"/></g>
+<g><circle class="hit" cx="98" cy="148.7" r="12" data-tip="0.47 m from the wall|-0.05 m sideways · final|commands here: forward 26"/><circle class="dot" cx="98" cy="148.7" r="4"/></g>
+<g><circle class="hit" cx="121" cy="197.7" r="12" data-tip="0.72 m from the wall|+0.05 m sideways · center|commands here: back 28"/><circle class="dot" cx="121" cy="197.7" r="4"/></g>
+<g><circle class="hit" cx="120.5" cy="154.2" r="12" data-tip="0.50 m from the wall|+0.04 m sideways · final|commands here: forward 26, hold, hold"/><circle class="dot" cx="120.5" cy="154.2" r="4"/></g>
+<path class="drone" d="M349.9,346.3 L365.4,344.8 L360.4,357.9 Z" aria-label="start heading"/>
+<path class="drone" d="M119.3,134.2 L127.1,147.8 L113.2,148.6 Z" aria-label="final heading"/>
+<g class="marker"><circle cx="386.5" cy="367.5" r="10"/><text x="386.5" y="367.5">1</text></g>
+<g class="marker"><circle cx="314.8" cy="283.2" r="10"/><text x="314.8" y="283.2">2</text></g>
+<g class="marker"><circle cx="237.2" cy="213.5" r="10"/><text x="237.2" y="213.5">3</text></g>
+<g class="marker"><circle cx="51.8" cy="211.6" r="10"/><text x="51.8" y="211.6">4</text></g>
+<g class="marker"><circle cx="98.5" cy="156.2" r="10"/><text x="98.5" y="156.2">5</text></g>
+<line class="baseline" x1="8" x2="133.0" y1="386" y2="386"/>
+<text class="tick" x="8" y="380">0.5 m</text>
+</svg>
+    <ol class="steps-list">
+      <li>Takes off facing away; searches in 30° turns until it sees the cup.</li>
+      <li>Turns to it and steps in 40 + 20 cm.</li>
+      <li>Sweeps 10° at a time, twice (the first sweep had too few readings). The lowest ToF reading is the wall's normal.</li>
+      <li>Turns square, strafes left 21, 24 and 24 cm, then centers on the cup.</li>
+      <li>Steps in to 0.50 m and holds: 27 commands, 87 s.</li>
+    </ol>
+    <figcaption>Top view of one approach in the test world, with the step errors measured in flight. A simulated path, not flight footage.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap" id="status" aria-labelledby="status-title">
+  <h2 class="visually-hidden" id="status-title" style="position:absolute;left:-999px">Where we are</h2>
+  <div class="tiles">
+    <div class="tile"><p class="label">Calibration flight commands answered</p><p class="value">72 / 72</p><p class="note">November 13 · step response measured on the TT</p></div>
+    <div class="tile"><p class="label">Planner approach flights that arrived</p><p class="value">2 of 4</p><p class="note">November 13 · first planner version</p></div>
+    <div class="tile"><p class="label">Changed planner, simulated success</p><p class="value">96.3%</p><p class="note">300 starts with flight-measured step errors</p></div>
+    <div class="tile"><p class="label">Small corrections per approach</p><p class="value">19 → 7</p><p class="note">median, before → after the fixes (simulation)</p></div>
+  </div>
+  <p class="callout"><strong>Next →</strong><span>The changed planner has not flown yet. Next flights: 1.5 m straight in, 1.8 m at 30° to the side, then a search among distractor prints.</span></p>
+</section>
+
+<section class="wrap section" id="architecture">
+  <div class="section-head">
+    <div class="num">01 · How it works</div>
+    <div>
+      <h2>Hover, look, take one step.</h2>
+      <p class="intro">We dropped continuous <code>rc</code> streaming for discrete SDK moves. The drone is always still when it is measured, so a command's effect on the picture is geometry, not latency or braking.</p>
+    </div>
+  </div>
+  <ol class="loop">
+    <li><div class="step">1 · Observe</div><p>6 video frames through YOLO11s, 6 forward ToF replies, and the yaw from the state stream.</p></li>
+    <li><div class="step">2 · Decide</div><p>The step planner picks one command for its current phase.</p></li>
+    <li><div class="step">3 · Act</div><p>One SDK step: move 20–100 cm forward, back, left, right, up or down, or turn 1–90°.</p></li>
+    <li><div class="step">4 · Settle</div><p>Wait for the reply, pause 0.5 s, and look again. About 3 s per step.</p></li>
+  </ol>
+  <p class="loop-foot">The planner is <code>objectpilot.stepwise</code>; <code>objectpilot.step_approach</code> runs it on the aircraft or in the test world with the same code.</p>
+
+  <ol class="phases">
+    <li><div><b>Search</b><span>Turn 30° at a time. A weak detection is turned to the image center and must reach 0.45 confidence.</span></div></li>
+    <li><div><b>Face</b><span>Yaw the box to the center, then step forward 50, 40, 25 or 20 cm by box size until ToF reads 1.1 m or less.</span></div></li>
+    <li><div><b>Sweep</b><span>Below 1.1 m, turn in 10° steps over ±20° around the lowest ToF reading and fit the wall's normal.</span></div></li>
+    <li><div><b>Square up</b><span>Turn to the normal and strafe D·tan(angle) so the drone stands in front of the picture.</span></div></li>
+    <li><div><b>Center</b><span>Strafe by the box offset; only from 0.70 m or farther, backing off first if needed.</span></div></li>
+    <li><div><b>Stand off</b><span>Step to 0.50 m by ToF and hold for three hovers. Moves under 20 cm go out and back.</span></div></li>
+  </ol>
+
+  <div class="grid-2" style="margin-top:28px">
+    <figure class="figure">
+      <h3>One range sensor finds the wall's normal</h3>
+      <p class="sub">The forward ToF reads D / cos(angle): the reading is lowest when the drone faces the wall square.</p>
+      <ul class="legend"><li><span class="key-dot"></span>Flight reading, median of 6</li><li><span class="key-line"></span>Fit D / cos(heading − normal)</li></ul>
+      <svg viewBox="0 0 560 310" role="img" aria-labelledby="sw-t"><title id="sw-t">Forward ToF reading against heading during the flight sweep</title>
+<defs><clipPath id="sw-clip"><rect x="52" y="30" width="492" height="240"/></clipPath></defs>
+<g class="ax">
+<line class="gridline" x1="52" x2="544" y1="270" y2="270"/>
+<text x="44" y="274" text-anchor="end">0.70</text>
+<line class="gridline" x1="52" x2="544" y1="222" y2="222"/>
+<text x="44" y="226" text-anchor="end">0.75</text>
+<line class="gridline" x1="52" x2="544" y1="174" y2="174"/>
+<text x="44" y="178" text-anchor="end">0.80</text>
+<line class="gridline" x1="52" x2="544" y1="126" y2="126"/>
+<text x="44" y="130" text-anchor="end">0.85</text>
+<line class="gridline" x1="52" x2="544" y1="78" y2="78"/>
+<text x="44" y="82" text-anchor="end">0.90</text>
+<line class="gridline" x1="52" x2="544" y1="30" y2="30"/>
+<text x="44" y="34" text-anchor="end">0.95</text>
+<text x="52" y="290" text−anchor="middle">−40°</text>
+<text x="175" y="290" text−anchor="middle">−20°</text>
+<text x="298" y="290" text−anchor="middle">0°</text>
+<text x="421" y="290" text−anchor="middle">+20°</text>
+<text x="544" y="290" text−anchor="middle">+40°</text>
+<line class="baseline" x1="52" x2="544" y1="270" y2="270"/>
+<text x="8" y="14">ToF (m)</text>
+<text x="298" y="308" text-anchor="middle">heading</text></g>
+<polyline class="line-s2" clip-path="url(#sw-clip)" points="52,0.7 58.1,13.7 64.3,26 70.5,37.8 76.6,49 82.8,59.6 88.9,69.8 95,79.4 101.2,88.6 107.3,97.3 113.5,105.6 119.7,113.5 125.8,121 131.9,128.1 138.1,134.9 144.2,141.3 150.4,147.3 156.6,153 162.7,158.4 168.8,163.5 175,168.3 181.2,172.8 187.3,177.1 193.4,181 199.6,184.7 205.8,188.1 211.9,191.2 218.1,194.1 224.2,196.8 230.3,199.2 236.5,201.4 242.7,203.3 248.8,205 254.9,206.5 261.1,207.7 267.2,208.7 273.4,209.5 279.6,210 285.7,210.4 291.9,210.5 298,210.4 304.1,210 310.3,209.5 316.4,208.7 322.6,207.7 328.8,206.5 334.9,205 341.1,203.3 347.2,201.4 353.4,199.2 359.5,196.8 365.6,194.1 371.8,191.2 377.9,188.1 384.1,184.7 390.2,181 396.4,177.1 402.6,172.8 408.7,168.3 414.9,163.5 421,158.4 427.1,153 433.3,147.3 439.4,141.3 445.6,134.9 451.8,128.1 457.9,121 464.1,113.5 470.2,105.6 476.4,97.3 482.5,88.6 488.6,79.4 494.8,69.8 500.9,59.6 507.1,49 513.2,37.8 519.4,26 525.5,13.7 531.7,0.7 537.9,-12.9 544,-27.3"/>
+<line class="baseline" x1="291.9" x2="291.9" y1="30" y2="270"/>
+<text class="lbl" x="297.9" y="42">wall normal, −1°</text>
+<g><circle class="hit" cx="298" cy="210.5" r="12" data-tip="0.762 m|heading +0°"/><circle class="dot" cx="298" cy="210.5" r="4.5"/></g>
+<g><circle class="hit" cx="341.1" cy="197" r="12" data-tip="0.776 m|heading +7°"/><circle class="dot" cx="341.1" cy="197" r="4.5"/></g>
+<g><circle class="hit" cx="390.2" cy="186.5" r="12" data-tip="0.787 m|heading +15°"/><circle class="dot" cx="390.2" cy="186.5" r="4.5"/></g>
+<g><circle class="hit" cx="439.4" cy="176.9" r="12" data-tip="0.797 m|heading +23°"/><circle class="dot" cx="439.4" cy="176.9" r="4.5"/></g>
+<g><circle class="hit" cx="494.8" cy="82.8" r="12" data-tip="0.895 m|heading +32°"/><circle class="dot" cx="494.8" cy="82.8" r="4.5"/></g>
+<g><circle class="hit" cx="439.4" cy="134.6" r="12" data-tip="0.841 m|heading +23°"/><circle class="dot" cx="439.4" cy="134.6" r="4.5"/></g>
+<g><circle class="hit" cx="377.9" cy="194.2" r="12" data-tip="0.779 m|heading +13°"/><circle class="dot" cx="377.9" cy="194.2" r="4.5"/></g>
+<g><circle class="hit" cx="328.8" cy="208.6" r="12" data-tip="0.764 m|heading +5°"/><circle class="dot" cx="328.8" cy="208.6" r="4.5"/></g>
+<g><circle class="hit" cx="285.7" cy="237.4" r="12" data-tip="0.734 m|heading -2°"/><circle class="dot" cx="285.7" cy="237.4" r="4.5"/></g>
+<g><circle class="hit" cx="236.5" cy="210.5" r="12" data-tip="0.762 m|heading -10°"/><circle class="dot" cx="236.5" cy="210.5" r="4.5"/></g>
+<g><circle class="hit" cx="187.3" cy="173" r="12" data-tip="0.801 m|heading -18°"/><circle class="dot" cx="187.3" cy="173" r="4.5"/></g>
+<g><circle class="hit" cx="131.9" cy="138.5" r="12" data-tip="0.837 m|heading -27°"/><circle class="dot" cx="131.9" cy="138.5" r="4.5"/></g>
+<g><circle class="hit" cx="82.8" cy="72.2" r="12" data-tip="0.906 m|heading -35°"/><circle class="dot" cx="82.8" cy="72.2" r="4.5"/></g>
+<g><circle class="hit" cx="131.9" cy="148.1" r="12" data-tip="0.827 m|heading -27°"/><circle class="dot" cx="131.9" cy="148.1" r="4.5"/></g>
+<g><circle class="hit" cx="181.2" cy="174" r="12" data-tip="0.800 m|heading -19°"/><circle class="dot" cx="181.2" cy="174" r="4.5"/></g>
+<g><circle class="hit" cx="236.5" cy="195.1" r="12" data-tip="0.778 m|heading -10°"/><circle class="dot" cx="236.5" cy="195.1" r="4.5"/></g>
+<g><circle class="hit" cx="285.7" cy="208.6" r="12" data-tip="0.764 m|heading -2°"/><circle class="dot" cx="285.7" cy="208.6" r="4.5"/></g>
+</svg>
+      <figcaption>Yaw sweep 0.76 m from the whiteboard, step calibration flight, November 13. Heading relative to the start of the sweep.</figcaption>
+      <details class="table-view"><summary>Show the readings</summary><div class="table-scroll" style="margin-top:8px"><table><thead><tr><th>Heading</th><th>ToF</th></tr></thead><tbody><tr><td class="num">+0°</td><td class="num">0.762 m</td></tr><tr><td class="num">+7°</td><td class="num">0.776 m</td></tr><tr><td class="num">+15°</td><td class="num">0.787 m</td></tr><tr><td class="num">+23°</td><td class="num">0.797 m</td></tr><tr><td class="num">+32°</td><td class="num">0.895 m</td></tr><tr><td class="num">+23°</td><td class="num">0.841 m</td></tr><tr><td class="num">+13°</td><td class="num">0.779 m</td></tr><tr><td class="num">+5°</td><td class="num">0.764 m</td></tr><tr><td class="num">-2°</td><td class="num">0.734 m</td></tr><tr><td class="num">-10°</td><td class="num">0.762 m</td></tr><tr><td class="num">-18°</td><td class="num">0.801 m</td></tr><tr><td class="num">-27°</td><td class="num">0.837 m</td></tr><tr><td class="num">-35°</td><td class="num">0.906 m</td></tr><tr><td class="num">-27°</td><td class="num">0.827 m</td></tr><tr><td class="num">-19°</td><td class="num">0.800 m</td></tr><tr><td class="num">-10°</td><td class="num">0.778 m</td></tr><tr><td class="num">-2°</td><td class="num">0.764 m</td></tr></tbody></table></div></details>
+    </figure>
+    <div class="card">
+      <div class="kicker">Safety layers</div>
+      <h3>Every command passes three checks</h3>
+      <p><b>Allowlist.</b> Only SDK steps of 20–100 cm, turns up to 90°, takeoff, land and stop. No <code>rc</code>, <code>go</code>, <code>flip</code> or <code>emergency</code>.</p>
+      <p><b>Planner.</b> Backs off below 0.40 m. A forward step must stay 3 cm clear of the 0.35 m minimum even if it overshoots by 30%. No strafing closer than 0.70 m.</p>
+      <p><b>Flight layer.</b> Lands below 0.32 m, below 25% battery, on a stale state stream, on height out of bounds, on repeated errors, or after 4 minutes.</p>
+      <p><b>Operator.</b> Types <code>fly</code> after a checklist; Ctrl+C stops and lands. If the laptop dies, the TT lands by itself 15 s after its last command.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap section" id="results">
+  <div class="section-head">
+    <div class="num">02 · Flights</div>
+    <div>
+      <h2>What the real drone did.</h2>
+      <p class="intro">Everything below happened on the delivered TT on November 13, 2026, in one room with the cup print on a whiteboard.</p>
+    </div>
+  </div>
+
+  <h3>Step calibration flight: assumed vs measured</h3>
+  <p class="intro" style="margin-bottom:14px">One supervised flight sent 72 single steps in opposite pairs and logged the box, ToF and yaw before and after each. Its numbers now drive the test world.</p>
+  <div class="table-scroll" style="margin-bottom:36px">
+    <table>
+      <thead><tr><th>Quantity</th><th>Assumed before</th><th>Measured in flight</th></tr></thead>
+      <tbody>
+        <tr><td>Move length</td><td class="num">exact ± 8%</td><td class="num">8.7% short ± 10.6%</td></tr>
+        <tr><td>Turn angle</td><td class="num">exact ± 1°</td><td class="num">2.0° short ± 1.0°</td></tr>
+        <tr><td>Heading change per move</td><td class="num">1°</td><td class="num">0.37°</td></tr>
+        <tr><td>ToF scatter between hovers</td><td class="num">about 2 mm</td><td class="num">1.3 cm</td></tr>
+        <tr><td>ToF at an angle</td><td>reads long (bench)</td><td>matches D / cos within ±30°</td></tr>
+        <tr><td>Video field of view</td><td class="num">54°</td><td class="num">54.2°</td></tr>
+        <tr><td>Error replies</td><td class="num">2%</td><td class="num">0 of 72</td></tr>
+        <tr><td>Box response to each command</td><td>left → box right, cw → box left, up → box down</td><td><span class="status good"><i aria-hidden="true">✓</i>All as assumed</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Planner approach flights</h3>
+  <p class="intro" style="margin-bottom:14px">The first planner version: 0.65 m stand-off, 40° search turns, YOLO at 640 px.</p>
+  <div class="table-scroll" style="margin-bottom:36px">
+    <table>
+      <thead><tr><th>Start</th><th>Result</th><th>What happened</th></tr></thead>
+      <tbody>
+        <tr><td>1.5 m straight in front, facing the print</td><td><span class="status good"><i aria-hidden="true">✓</i>Arrived</span></td><td>38 s, 13 commands: face, sweep, one 38 cm strafe, one step in, 0.66 m. (The first try was refused at takeoff: <code>error, high temp</code>.)</td></tr>
+        <tr><td>1.8 m from the print, 30° off its normal</td><td><span class="status partial"><i aria-hidden="true">!</i>Arrived, over-corrected</span></td><td>76 s, 25 commands; 17 were small centering and distance corrections.</td></tr>
+        <tr><td>1.8 m in front, turned away, distractor prints on the wall</td><td><span class="status hold"><i aria-hidden="true">‖</i>Landed on battery</span></td><td>Found the cup after two search turns and squared up; landed at 25% battery (51% at takeoff).</td></tr>
+        <tr><td>Same, three backpack prints beside the cup</td><td><span class="status bad"><i aria-hidden="true">✕</i>Not found</span></td><td>Searched the full 360° and missed the cup: see below.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="miss">
+    <figure class="figure" style="padding:14px">
+      <div class="photo">
+        <img src="./assets/flight-2026-11-13-search-yaw77.jpg" width="800" height="600" alt="Drone camera frame of a gray whiteboard with two backpack prints on the left and a yellow cup print at the right edge.">
+        <div class="box" style="left:79.5%;top:17%;width:7%;height:12%"><span>cup 0.43</span></div>
       </div>
-      <figure class="pose-demo" aria-labelledby="demo-caption">
-        <div class="demo-top"><span><span class="demo-dot" aria-hidden="true"></span>SUPERVISOR EXPLORER</span><span class="mono">ILLUSTRATION</span></div>
-        <div class="canvas-wrap"><canvas id="object-canvas" width="700" height="500" role="img" aria-label="Illustration of a printed target and its detection box. Adjust target position, wall distance and sensor validity to explore stop conditions."></canvas></div>
-        <div class="demo-values"><div><span class="mono">eₓ</span><output id="x-output">+0.12</output><span>centering error</span></div><div><span class="mono">FORWARD ToF</span><output id="range-output">0.90 m</output><span>illustrative reading</span></div><div><span class="mono">COMMAND</span><output id="state-output" class="state-value">Center</output><span>supervisor decision</span></div></div>
-        <div class="demo-controls">
-          <label for="target-x">Target position<input id="target-x" type="range" min="-28" max="28" value="12" step="1"></label>
-          <label for="wall-distance">Wall distance<input id="wall-distance" type="range" min="25" max="180" value="90" step="1"></label>
-          <div class="demo-tools"><button id="sensor-toggle" type="button" aria-pressed="false">Invalidate ToF</button><button id="occlude-demo" type="button" aria-pressed="false">Hide target</button><button id="reset-demo" type="button">Reset</button></div>
-        </div>
-        <figcaption id="demo-caption">An interactive explanation of the stop rules, not camera inference or a running PPO policy. The 0.65 m stand-off and 0.40 m minimum are provisional simulation settings.</figcaption>
-      </figure>
-    </section>
-
-    <section class="scope-strip section-wrap" aria-label="Current project scope">
-      <div><span class="scope-number">01</span><div><h2>Printed targets first</h2><p>Stationary images on a wall, in indoor light</p></div></div>
-      <div><span class="scope-number">02</span><div><h2>Two control outputs</h2><p>Forward and yaw; onboard altitude stabilization</p></div></div>
-      <div><span class="scope-number">03</span><div><h2>Measured stand-off</h2><p>Forward ToF for near-wall distance</p></div></div>
-    </section>
-
-    <section class="section-wrap content-section" id="prototypes">
-      <div class="section-heading"><div><div class="eyebrow">01 / OCTOBER 29 DELIVERABLE</div><h2>Rapid prototypes</h2></div><p>Three prototype components, with evidence of what runs now and a clear next test for each.</p></div>
-      <div class="prototype-grid">
-        <article class="prototype-card"><div class="prototype-top"><span class="mono">P01 / PERCEPTION</span><span class="evidence-tag">Local software</span></div><h3>Pixels to bounded commands</h3><p>YOLO detections feed target confirmation, a shared state builder, a controller and an independent supervisor. The video and webcam launchers produce dry-run commands and JSONL logs.</p><div class="prototype-proof"><strong>Original team run: 15 tests</strong><span>Across state, control, data and sensor parsing. Ten blank-video samples all produced zero motion.</span></div><p class="next-test"><strong>Next:</strong> record real wall prints, label them and measure detection quality. Blank-video inference is only an integration check.</p><a class="text-link" href="./assets/objectpilot-starter.zip">Get the runnable starter ↗</a></article>
-        <article class="prototype-card"><div class="prototype-top"><span class="mono">P02 / CONTROL</span><span class="evidence-tag">Simulation</span></div><h3>A closed-loop approach</h3><p>A Gymnasium environment responds to forward and yaw actions, with randomized lag, detection noise and dropout. PID and PPO use the same observation format and supervisor.</p><div class="prototype-proof"><strong>100,352 PPO transitions</strong><span>One initial training seed, checkpoint save/load and deterministic evaluation completed.</span></div><p class="next-test"><strong>Next:</strong> tune the baseline, train multiple PPO seeds and calibrate the model from the actual TT.</p><a class="text-link" href="#simulation">Replay a recorded rollout ↓</a></article>
-        <article class="prototype-card"><div class="prototype-top"><span class="mono">P03 / SENSING</span><span class="evidence-tag pending">Prepared</span></div><h3>Know when range is fresh</h3><p>An extension to the official ESP32 example adds a sample sequence, validity and age. Invalid or cached readings must not look like new measurements.</p><div class="prototype-proof"><strong>Firmware extension generated</strong><span>Pinned RMTT source inspected. Custom reply parser tested locally; optional VL53L1X adapter prepared.</span></div><p class="next-test"><strong>Next:</strong> compile for the delivered board, verify query routing and compare forward ToF with a tape measure. No firmware has been flashed.</p><a class="text-link" href="https://github.com/RoboMaster/RMTT_Libs">Official firmware source ↗</a></article>
+      <figcaption>Drone frame at yaw 77° during the missed search. The cup print is sharp and complete, at the right edge of the frame.</figcaption>
+    </figure>
+    <div>
+      <h3>Why the search missed a cup it could see</h3>
+      <p class="intro" style="font-size:16px">With 40° turns the cup sat between two views, at the frame edge in both. YOLO11s detected it each time, but below the 0.45 threshold. The turns were not too fast: every look happens after the drone has stopped, and the six frames of each look agree.</p>
+      <div class="table-scroll" style="margin:16px 0">
+        <table>
+          <thead><tr><th>View</th><th>At 640 px (as flown)</th><th>At 960 px</th></tr></thead>
+          <tbody>
+            <tr><td>yaw 77°, cup at right edge</td><td class="num">0.43, 0.16</td><td class="num">0.36, 0.39</td></tr>
+            <tr><td>yaw 115°, cup at left edge</td><td class="num">0.19, 0.20</td><td class="num">0.60, 0.54</td></tr>
+          </tbody>
+        </table>
       </div>
+      <p class="intro" style="font-size:16px"><b>Fix:</b> 30° turns, so the cup is always within 15° of some view's center; YOLO at the stream's 960 px width; and any box above 0.25 becomes a candidate that is turned to the center and must reach 0.45.</p>
+    </div>
+  </div>
+</section>
 
-      <div class="architecture-details">
-        <article><span class="detail-index">+</span><h3>TT control alignment audit</h3><p>Official TT SDK and public projects checked against both contributors. Simulation and camera replay now share target confirmation, measured arrival, integer RC mapping and calibration config.</p><a href="./alignment.html">Inspect the audit and current evidence ↗</a></article>
-        <article><span class="detail-index">→</span><h3>Requirements, kept with the code</h3><p>The English repository PRD now records 18 functional requirements, the primary 64-value policy contract, acceptance gates and implementation status and remaining hardware work. The website and Markdown edition are generated from one source.</p><a href="./prd.html">Read the public PRD ↗</a></article>
-      </div>
+<section class="wrap section" id="simulation">
+  <div class="section-head">
+    <div class="num">03 · Fixes</div>
+    <div>
+      <h2>Why it over-corrected, and what changed.</h2>
+      <p class="intro">The test world had been too clean to show the problem. With the flight's measured step errors added, it reproduced the dithering, and we could fix it before flying again.</p>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="cause"><h3>A re-check inside the noise</h3><p>At 0.65 m a ±10° ToF re-check changes the reading by about 1 cm, the same as the scatter between hovers. It turned the drone 8° off square, so every strafe also changed the wall distance.</p></div>
+      <div class="cause"><h3>Tolerance equal to step precision</h3><p>A 7 cm correction is <code>right 27</code> then <code>left 20</code>; with about 10% error per leg it nets 7 ± 4 cm. A hold at 0.70 m drifted out by one reading and the corrections restarted.</p></div>
+      <div class="cause"><h3>A world without the drone's habits</h3><p>Moves 9% short, turns 2° short and 1.3 cm ToF scatter were missing. With them, the old planner needs 18 small corrections per approach in simulation (flight: 17).</p></div>
+    </div>
+    <div class="card">
+      <div class="kicker">Planner changes</div>
+      <ul class="fixlist">
+        <li><b>Wider sweep, no re-check:</b> fit the normal over ±20°; the ±10° re-check at the stand-off is off.</li>
+        <li><b>Hysteresis:</b> once holding, tolerances widen by 1.4×; after three small corrections on an axis, by 1.5×.</li>
+        <li><b>Learns the drone:</b> measures the turn and move shortfall in flight from yaw and ToF, and compensates.</li>
+        <li><b>Safer near the wall:</b> no strafe inside 0.70 m; forward steps sized so a 30% overshoot stays clear.</li>
+        <li><b>Closer stand-off:</b> 0.50 m, minimum 0.35 m. Takeoff now needs 40% battery.</li>
+      </ul>
+    </div>
+  </div>
+  <figure class="figure" style="margin-top:16px">
+    <h3>Old vs changed planner, same 300 simulated starts</h3>
+    <p class="sub">Full flight loop with the measured step errors: 1.5–3.2 m from the print, up to 50° off its normal, 40% starting turned away.</p>
+    <ul class="legend"><li><span class="key-bar s2"></span>Before (as flown November 13)</li><li><span class="key-bar s1"></span>After (changed planner)</li></ul>
+    <svg viewBox="0 0 720 260" role="img" aria-labelledby="bars-t"><title id="bars-t">Success rate and small corrections, before and after the planner changes</title>
+<text class="lbl-strong" x="40" y="14">Success rate</text><g class="ax">
+<line class="gridline" x1="40" x2="330" y1="214" y2="214"/>
+<text x="32" y="218" text-anchor="end">0%</text>
+<line class="gridline" x1="40" x2="330" y1="169" y2="169"/>
+<text x="32" y="173" text-anchor="end">25%</text>
+<line class="gridline" x1="40" x2="330" y1="124" y2="124"/>
+<text x="32" y="128" text-anchor="end">50%</text>
+<line class="gridline" x1="40" x2="330" y1="79" y2="79"/>
+<text x="32" y="83" text-anchor="end">75%</text>
+<line class="gridline" x1="40" x2="330" y1="34" y2="34"/>
+<text x="32" y="38" text-anchor="end">100%</text>
+</g>
+<path class="mark-s2 bar-mark" d="M80.5,214 V83.5 Q80.5,79.5 84.5,79.5 H100.5 Q104.5,79.5 104.5,83.5 V214 Z" data-tip="74.7%|Before · 0.65 m stand-off"/>
+<text class="val" x="92.5" y="73.5" text-anchor="middle">74.7%</text>
+<path class="mark-s1 bar-mark" d="M120.5,214 V49.3 Q120.5,45.3 124.5,45.3 H140.5 Q144.5,45.3 144.5,49.3 V214 Z" data-tip="93.7%|After · 0.65 m stand-off"/>
+<text class="val" x="132.5" y="39.3" text-anchor="middle">93.7%</text>
+<text class="lbl" x="112.5" y="234" text-anchor="middle">0.65 m stand-off</text>
+<path class="mark-s2 bar-mark" d="M225.5,214 V90.2 Q225.5,86.2 229.5,86.2 H245.5 Q249.5,86.2 249.5,90.2 V214 Z" data-tip="71.0%|Before · 0.50 m stand-off"/>
+<text class="val" x="237.5" y="80.2" text-anchor="middle">71.0%</text>
+<path class="mark-s1 bar-mark" d="M265.5,214 V44.7 Q265.5,40.7 269.5,40.7 H285.5 Q289.5,40.7 289.5,44.7 V214 Z" data-tip="96.3%|After · 0.50 m stand-off"/>
+<text class="val" x="277.5" y="34.7" text-anchor="middle">96.3%</text>
+<text class="lbl" x="257.5" y="234" text-anchor="middle">0.50 m stand-off</text>
+<line class="baseline" x1="40" x2="330" y1="214" y2="214"/>
+<text class="lbl-strong" x="430" y="14">Small corrections per approach (median)</text><g class="ax">
+<line class="gridline" x1="430" x2="720" y1="214" y2="214"/>
+<text x="422" y="218" text-anchor="end">0</text>
+<line class="gridline" x1="430" x2="720" y1="169" y2="169"/>
+<text x="422" y="173" text-anchor="end">5</text>
+<line class="gridline" x1="430" x2="720" y1="124" y2="124"/>
+<text x="422" y="128" text-anchor="end">10</text>
+<line class="gridline" x1="430" x2="720" y1="79" y2="79"/>
+<text x="422" y="83" text-anchor="end">15</text>
+<line class="gridline" x1="430" x2="720" y1="34" y2="34"/>
+<text x="422" y="38" text-anchor="end">20</text>
+</g>
+<path class="mark-s2 bar-mark" d="M470.5,214 V56 Q470.5,52 474.5,52 H490.5 Q494.5,52 494.5,56 V214 Z" data-tip="18|Before · 0.65 m stand-off"/>
+<text class="val" x="482.5" y="46" text-anchor="middle">18</text>
+<path class="mark-s1 bar-mark" d="M510.5,214 V164 Q510.5,160 514.5,160 H530.5 Q534.5,160 534.5,164 V214 Z" data-tip="6|After · 0.65 m stand-off"/>
+<text class="val" x="522.5" y="154" text-anchor="middle">6</text>
+<text class="lbl" x="502.5" y="234" text-anchor="middle">0.65 m stand-off</text>
+<path class="mark-s2 bar-mark" d="M615.5,214 V47 Q615.5,43 619.5,43 H635.5 Q639.5,43 639.5,47 V214 Z" data-tip="19|Before · 0.50 m stand-off"/>
+<text class="val" x="627.5" y="37" text-anchor="middle">19</text>
+<path class="mark-s1 bar-mark" d="M655.5,214 V155 Q655.5,151 659.5,151 H675.5 Q679.5,151 679.5,155 V214 Z" data-tip="7|After · 0.50 m stand-off"/>
+<text class="val" x="667.5" y="145" text-anchor="middle">7</text>
+<text class="lbl" x="647.5" y="234" text-anchor="middle">0.50 m stand-off</text>
+<line class="baseline" x1="430" x2="720" y1="214" y2="214"/>
+</svg>
+    <figcaption>Simulation, not flight. Success means arriving within 8 cm of the stand-off and of center, within 8° of square, never inside the minimum. "Before" already includes the two near-wall safety rules.</figcaption>
+    <details class="table-view"><summary>Show the numbers</summary><div class="table-scroll" style="margin-top:8px"><table><thead><tr><th>Stand-off</th><th>Success before</th><th>Success after</th><th>Corrections before</th><th>Corrections after</th></tr></thead><tbody><tr><td>0.65 m stand-off</td><td class="num">74.7%</td><td class="num">93.7%</td><td class="num">18</td><td class="num">6</td></tr><tr><td>0.50 m stand-off</td><td class="num">71.0%</td><td class="num">96.3%</td><td class="num">19</td><td class="num">7</td></tr></tbody></table></div></details>
+  </figure>
+</section>
 
-      <div class="rollout-panel" id="simulation">
-        <div class="rollout-heading"><div><div class="eyebrow">RECORDED PYTHON SIMULATOR OUTPUT</div><h3>Same start. Two controllers.</h3></div><p>Seed 10000, the first diagnostic scenario. Switch controllers or scrub through their recorded trajectories.</p></div>
-        <div class="rollout-layout">
-          <figure class="rollout-figure"><canvas id="rollout-canvas" width="800" height="440" role="img" aria-label="Top-down replay of a drone approaching a printed target on a wall, with desired stand-off and minimum clearance marked."></canvas><div class="rollout-legend"><span>Stand-off: 0.65 m</span><span>Minimum: 0.40 m</span></div><figcaption>Historical trajectory recorded before the control-v2 audit. This is not flight footage and the browser does not run PPO.</figcaption></figure>
-          <div class="rollout-controls">
-            <label for="controller-select">Controller<select id="controller-select"><option value="pid">PID starting gains</option><option value="ppo">PPO · 100,352 steps</option></select></label>
-            <dl class="rollout-readings"><div><dt>Elapsed</dt><dd id="rollout-time">—</dd></div><div><dt>Wall clearance</dt><dd id="rollout-distance">—</dd></div><div><dt>Forward / yaw</dt><dd id="rollout-action">—</dd></div><div><dt>Episode outcome</dt><dd id="rollout-outcome">—</dd></div></dl>
-            <label for="rollout-position">Replay position<input id="rollout-position" type="range" min="0" max="1" value="0" step="1" disabled></label>
-            <button id="rollout-play" type="button" class="button primary" aria-pressed="false" disabled>Play rollout</button>
-            <p id="rollout-status" class="small-note" role="status">Loading recorded trajectory…</p>
-            <a class="text-link" href="./evidence/trajectory.json" download>Download this trace ↓</a>
-          </div>
-        </div>
-      </div>
-    </section>
+<section class="wrap section" id="roadmap">
+  <div class="section-head">
+    <div class="num">04 · Timeline</div>
+    <div>
+      <h2>From a simulator to a drone in the air.</h2>
+      <p class="intro">Dates in 2026. Course deadlines are fixed; flight work is planned week by week.</p>
+    </div>
+  </div>
+  <ol class="timeline">
+    <li><span class="date">Oct 29</span><span class="node"></span><div><h3>Rapid prototypes</h3><p>Dry-run vision-to-command pipeline, PID and PPO in a simulator, ESP32 range firmware prepared.</p></div></li>
+    <li><span class="date">Oct 31</span><span class="node"></span><div><h3>Simulator controllers tuned</h3><p>PID tuned and three PPO seeds compared on 100 simulated validation scenarios.</p></div></li>
+    <li><span class="date">Nov 5–7</span><span class="node"></span><div><h3>The TT arrives and gets measured</h3><p>Camera stand tests: YOLO11s detects the cup print from 0.5 to 3 m; the backpack print fails and is dropped. ToF bench: about 2 cm long, no reply beyond 1.2 m. Two manual flights recorded.</p></div></li>
+    <li><span class="date">Nov 8</span><span class="node"></span><div><h3>New direction: stop-and-go steps</h3><p>Discrete SDK moves and a ToF wall-normal sweep replace streaming control. In the test world, squaring up arrives 95% of the time vs 15% for yaw-only.</p></div></li>
+    <li><span class="date">Nov 13</span><span class="node"></span><div><h3>Calibration flight</h3><p>72 of 72 step commands; measured move, turn and ToF behavior on the real aircraft.</p></div></li>
+    <li><span class="date">Nov 13</span><span class="node"></span><div><h3>First planner approaches, then fixes</h3><p>2 of 4 approaches arrived. Over-correction and the missed search fixed; 96.3% in simulation with flight noise.</p></div></li>
+    <li class="next"><span class="date">Next</span><span class="node"></span><div><h3>Fly the changed planner</h3><p>Straight in, 30° to the side, then a search with distractors. Screen the bottle print and a replacement third print.</p></div></li>
+    <li class="planned"><span class="date">Then</span><span class="node"></span><div><h3>Say the word</h3><p>Pick the target by voice on the laptop microphone, from a fixed word list.</p></div></li>
+    <li class="planned"><span class="date">Dec 3</span><span class="node"></span><div><h3>Feature freeze</h3><p>Pick the most reliable configuration and keep its logs and settings.</p></div></li>
+    <li class="planned"><span class="date">Dec 10 · 15</span><span class="node"></span><div><h3>Final demo, then report</h3><p>Demo on December 10; final report and peer review due December 15.</p></div></li>
+  </ol>
+</section>
 
-    <section class="results-section" id="results"><div class="section-wrap">
-      <div class="section-heading"><div><div class="eyebrow">02 / INITIAL EVIDENCE</div><h2>A baseline to improve on.</h2></div><p>Thirty matched diagnostic episodes, seeds 10000–10029, with synthetic observations and a common supervisor. All numbers below are simulation results.</p></div>
-      <div class="result-bars" aria-label="Successes out of 30 simulation episodes">
-        <div><div class="bar-label"><strong>PID starting gains</strong><span>30 / 30</span></div><div class="bar-track"><span style="width:100%"></span></div></div>
-        <div><div class="bar-label"><strong>PPO · 100,352 steps</strong><span>14 / 30</span></div><div class="bar-track"><span style="width:46.6667%"></span></div></div>
-        <div><div class="bar-label"><strong>PPO · 8,192 steps</strong><span>0 / 30</span></div><div class="bar-track"><span style="width:0%"></span></div></div>
-      </div>
-      <div class="results-table-wrap" role="region" aria-label="Simulation results table; scroll horizontally on small screens" tabindex="0"><table class="results-table"><caption>Initial simulation comparison · October 29, 2026</caption><thead><tr><th scope="col">Controller</th><th scope="col">Success rate</th><th scope="col">95% Wilson interval</th><th scope="col">Minimum-distance violations</th><th scope="col">Episode data</th></tr></thead><tbody>
-        <tr><th scope="row">PID starting gains</th><td>100%</td><td>88.6–100%</td><td>0</td><td><a href="./evidence/pid-episodes.csv" download>CSV ↓</a></td></tr>
-        <tr><th scope="row">PPO · 100,352 steps</th><td>46.7%</td><td>30.2–63.9%</td><td>0</td><td><a href="./evidence/ppo-episodes.csv" download>CSV ↓</a></td></tr>
-        <tr><th scope="row">PPO · 8,192 steps</th><td>0%</td><td>0–11.4%</td><td>0</td><td><a href="./evidence/ppo_smoke-episodes.csv" download>CSV ↓</a></td></tr>
-      </tbody></table></div>
-      <p class="evidence-note">PID remains the baseline. These short, single-seed PPO runs do not establish a final comparison. The diagnostic scenarios are now development data; final evaluation needs new held-out seeds, tuned controllers and hardware trials. Zero simulated distance violations is not evidence of real-flight safety. The <a href="./alignment.html#tuning">October 31 tuning evidence</a> compares tuned PID and control-v2 PPO seeds on 100 new validation scenarios.</p>
-    </div></section>
+<section class="wrap section" id="data">
+  <div class="section-head">
+    <div class="num">05 · Still needed</div>
+    <div>
+      <h2>What we still have to measure.</h2>
+      <p class="intro">The test world still assumes these. Each one is a short session.</p>
+    </div>
+  </div>
+  <ol class="needs">
+    <li><span class="n">1</span><div><b>Fly the changed planner</b><p>The three starts above, with the flight height set to print center + 9 cm and at least 55% battery (it drops about 0.5% per second when low).</p></div></li>
+    <li><span class="n">2</span><div><b>Bottle and third print on the stand</b><p>0.65 to 3 m straight on, as for the cup. The backpack print failed with every pretrained model and needs a replacement picture.</p></div></li>
+    <li><span class="n">3</span><div><b>Detection against viewing angle</b><p>Each print at 1.5 and 2.5 m, from 0 to 65° off its normal. This decides how oblique a start can be.</p></div></li>
+    <li><span class="n">4</span><div><b>All three prints together</b><p>At demo spacing, to check that YOLO never mistakes one for another.</p></div></li>
+    <li><span class="n">5</span><div><b>Command words</b><p>Each word spoken about ten times on the laptop microphone with the propellers running.</p></div></li>
+  </ol>
+</section>
 
-    <section class="section-wrap content-section" id="architecture">
-      <div class="section-heading"><div><div class="eyebrow">03 / SYSTEM</div><h2>Vision finds it.<br>ToF measures the approach.</h2></div><p>The laptop handles perception and control. The TT handles flight stabilization. Its expansion ESP32 provides the forward range needed near the wall.</p></div>
-      <div class="architecture-panel"><div class="architecture-label"><span class="mono">CAMERA + FORWARD RANGE → LAPTOP</span><span>Target: 10 Hz control cycle</span></div>
-        <div class="pipeline"><div class="pipeline-node"><span class="step-index">01</span><h3>Detect</h3><p>YOLO11n + target confirmation</p><span class="node-tag">box · confidence</span></div><span class="connector" aria-hidden="true">→</span><div class="pipeline-node"><span class="step-index">02</span><h3>Build state</h3><p>Vision, range and freshness</p><span class="node-tag">16 features × 4</span></div><span class="connector" aria-hidden="true">→</span><div class="pipeline-node policy"><span class="step-index">03</span><h3>PID or PPO</h3><p>Propose two actions</p><span class="node-tag">forward · yaw</span></div><span class="connector" aria-hidden="true">→</span><div class="pipeline-node"><span class="step-index">04</span><h3>Supervise</h3><p>Reject stale or unsafe inputs</p><span class="node-tag">bounded RC</span></div></div>
-        <div class="telemetry-note"><span class="mono">CURRENT OUTPUT</span><span>Dry-run command log. Live dispatch, takeover and link-loss behavior are hardware integration gates.</span></div>
-      </div>
-      <div class="architecture-details"><article><span class="detail-index">A</span><h3>64 policy inputs, two outputs</h3><p>Box position and scale, visual distance, forward ToF, validity, association, confidence, data ages, rates and previous actions form 16 features. Four ticks provide history. The policy outputs forward and yaw; SDK RC values are control channels, not meters per second.</p></article><article><span class="detail-index">B</span><h3>A sensor that earns our trust</h3><p>The kit includes forward ToF, specified up to 1.2 m indoors against a white wall. It is distinct from the aircraft’s downward ToF. We will test the built-in sensor before enabling an external VL53L1X. On wall prints, it measures the wall.</p><a href="https://dl.djicdn.com/downloads/RoboMaster%20TT/RoboMaster_TT_Tello_Talent_User_Manual_en.pdf">DJI platform manual ↗</a></article></div>
-    </section>
+<section class="wrap section" id="prototypes">
+  <div class="section-head">
+    <div class="num">06 · Archive and sources</div>
+    <div>
+      <h2>Earlier work stays readable.</h2>
+      <p class="intro">These pages describe the October streaming-control design: PID and PPO on a 64-value observation. The step planner has replaced its control parts; the history is kept on purpose.</p>
+    </div>
+  </div>
+  <div class="links" style="margin-bottom:14px">
+    <a href="./archive-2026-10-29.html"><b>October 29 homepage</b><span>Rapid prototypes, simulator rollouts and the original plan.</span><span class="when">Archived</span></a>
+    <a href="./prototypes.html"><b>Aligned prototypes</b><span>Interactive explanation of the shared pipeline and supervisor.</span><span class="when">Archived</span></a>
+    <a href="./alignment.html"><b>TT control alignment audit</b><span>SDK and public projects checked against both contributors.</span><span class="when">Archived</span></a>
+    <a href="./prd.html"><b>Product requirements</b><span>18 functional requirements; control sections superseded.</span><span class="when">Archived</span></a>
+    <a href="./log.html"><b>October progress plan</b><span>The plan as written before the drone arrived.</span><span class="when">Archived</span></a>
+    <a href="./assets/objectpilot-starter.zip"><b>Source package</b><span>The repository's code, tests, configs and docs as a zip.</span><span class="when">Download</span></a>
+  </div>
+  <div class="links">
+    <a href="https://github.com/jonatl5/posepilot/blob/main/research/STEPWISE.md"><b>Step planner design</b><span>Phases, safety rules, test world and results.</span><span class="when">research/STEPWISE.md</span></a>
+    <a href="https://github.com/jonatl5/posepilot/blob/main/research/STEP_FLIGHT.md"><b>Calibration flight</b><span>Procedure, measurements and noise estimates.</span><span class="when">research/STEP_FLIGHT.md</span></a>
+    <a href="https://github.com/jonatl5/posepilot/blob/main/research/STEP_APPROACH.md"><b>Approach flight</b><span>Procedure, November 13 flights and simulation.</span><span class="when">research/STEP_APPROACH.md</span></a>
+  </div>
+</section>
+</main>
 
-    <section class="state-section" id="data"><div class="section-wrap data-layout"><div class="state-intro"><div class="eyebrow">04 / BEFORE THE DRONE ARRIVES</div><h2>Collect videos.<br>Train the right component.</h2><p>Phone videos are for detection and observation-noise measurements. PPO needs an interactive environment whose next state changes with its actions.</p></div><ol class="capture-list"><li><strong>Print and mark</strong><span>Start with 2–3 object classes on matte A3 prints. Mark camera-to-wall distances from 0.4 to 3 m.</span></li><li><strong>Capture the difficult moments</strong><span>Record approach, yaw, pauses, occlusions, partial crops and empty walls. Keep the camera at a repeatable height.</span></li><li><strong>Label and split by session</strong><span>Sample 1–2 frames/sec, review the object boxes and keep each video/print group in one split.</span></li><li><strong>Adapt after delivery</strong><span>Collect TT footage, recalibrate each print and measure latency, range validity and command response.</span></li></ol></div></section>
-
-    <section class="section-wrap content-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow">05 / COURSE MILESTONES</div><h2>From the prototype to the demo.</h2></div><p>Dates follow the course plan. Expected drone arrival is approximately November 4; calibration comes before autonomous trials.</p></div><ol class="timeline">
-      <li><div class="timeline-time">OCT 29</div><div class="timeline-body"><h3>Rapid prototypes</h3><p>Dry-run pipeline, initial PID/PPO comparison, data tools and ESP32 extension preparation.</p></div><span class="planned done">Complete</span></li>
-      <li><div class="timeline-time">OCT 30–NOV 3</div><div class="timeline-body"><h3>Collect prints and present progress</h3><p>Record phone footage, benchmark the detector and show the simulation at the November 3 status presentation. PID gains were tuned and three PPO seeds validated in simulation on October 31.</p></div><span class="planned">In progress</span></li>
-      <li><div class="timeline-time">NOV 4–7</div><div class="timeline-body"><h3>Bring up the TT and measure</h3><p>Verify forward range, compile firmware, calibrate the camera and measure delay, braking and command response.</p></div><span class="planned">Planned</span></li>
-      <li><div class="timeline-time">NOV 8–19</div><div class="timeline-body"><h3>Validate the PID approach</h3><p>Supervised printed-wall trials and TT-specific data. Peer Review 1: November 10, noon Pacific.</p></div><span class="planned">Planned</span></li>
-      <li><div class="timeline-time">NOV 20–DEC 3</div><div class="timeline-body"><h3>Compare calibrated controllers</h3><p>Multiple PPO seeds, matched trials and measured failures. Freeze features on December 3.</p></div><span class="planned">Planned</span></li>
-      <li><div class="timeline-time">DEC 4–15</div><div class="timeline-body"><h3>Rehearse, demonstrate, report</h3><p>Final demo December 10. Final report and Peer Review 2 due December 15, noon Pacific.</p></div><span class="planned">Planned</span></li>
-    </ol></section>
-
-    <section class="supervisor-section"><div class="section-wrap supervisor-layout"><div><div class="eyebrow">INDEPENDENT SUPERVISION</div><h2>Stop when the evidence disappears.</h2><p>Both controllers share the same limits. Once the system enters the near-range region, a missing or stale forward reading blocks further approach. Actual braking margins and firmware failsafes still need validation.</p></div><div class="supervisor-flow"><div><span class="mono">CENTER</span><span>Confirm a fresh target</span></div><span aria-hidden="true">↓</span><div><span class="mono">APPROACH</span><span>Limit forward and yaw commands</span></div><span aria-hidden="true">↓</span><div><span class="mono">HOLD</span><span>Missing target, stale range or close wall</span></div><p>A lost radio link can prevent a laptop-issued land command from arriving. Flight dispatch and link-loss procedures must be tested on hardware.</p></div></div></section>
-
-    <section class="section-wrap references-section" id="references"><div><div class="eyebrow">06 / REPRODUCIBLE WORK</div><h2>Plans, code and evidence.</h2><p>Review the current plan, run the starter locally or inspect the experiment data. Drive documents may require team access.</p></div><div class="reference-list">
-      <a href="./prd.html"><span>01</span>Updated product requirements <span>↗</span></a>
-      <a href="./assets/objectpilot-starter.zip"><span>02</span>Integrated source package <span>↗</span></a>
-      <a href="./evidence/results.json" download><span>03</span>Machine-readable results <span>↓</span></a>
-      <a href="https://github.com/damiafuentes/DJITelloPy"><span>04</span>DJITelloPy SDK adapter <span>↗</span></a>
-      <a href="https://github.com/RoboMaster/RMTT_Libs"><span>05</span>Official ESP32 support package <span>↗</span></a>
-      <a href="https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html"><span>06</span>Stable-Baselines3 PPO <span>↗</span></a>
-    </div></section>
-  </main>
-  <footer class="footer section-wrap"><div><a class="footer-brand" href="#top">objectPilot</a><span>Object approach research · October 29, 2026</span></div><div><a href="./log.html">Read the progress log ↗</a><span>© 2026 jonatl5 · MIT</span></div></footer>
-  <noscript><p class="noscript-note">Prototype details and results are available without JavaScript. The supervisor explorer and rollout playback require JavaScript.</p></noscript>
+<footer class="footer">
+  <div class="wrap"><span>objectPilot · RoboMaster TT capstone · updated November 13, 2026</span><span>© 2026 jonatl5 · MIT · <a href="https://github.com/jonatl5/posepilot">Source on GitHub</a></span></div>
+</footer>
+<script src="./site.js?v=2026-11-13" defer></script>
 </body>
 </html>
