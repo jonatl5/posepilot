@@ -20,3 +20,8 @@ build/
 dist/
 .ruff_cache/
 data/clips.csv
+
+# Local recordings and measurement logs anywhere under data/
+data/**/*.mp4
+data/**/*.MP4
+data/**/*.mov

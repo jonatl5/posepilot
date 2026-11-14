@@ -1,0 +1,20 @@
+{
+  "name": "stock-forward-tof-bench-v1",
+  "reference": "Horizontal distance from the target surface to the front window of the forward ToF sensor on the top module, measured with a tape and the aircraft level on a stand. Motors stay off.",
+  "seconds_per_point": 10,
+  "interval_s": 0.1,
+  "blocks": [
+    {"surface": "whiteboard", "distances_m": [0.25, 0.4, 0.5, 0.65, 0.8, 1.0, 1.1, 1.2, 1.3, 1.5], "angles_deg": [0],
+     "note": "Bare whiteboard next to the target print, beam perpendicular to the board."},
+    {"surface": "cup_print", "distances_m": [0.25, 0.4, 0.5, 0.65, 0.8, 1.0, 1.1, 1.2, 1.3, 1.5], "angles_deg": [0],
+     "note": "A spare cup print taped flat at beam height so the beam lands on the printed cup."},
+    {"surface": "dark_print", "distances_m": [0.4, 0.65, 0.8, 1.0, 1.2], "angles_deg": [0],
+     "note": "A sheet printed solid black, taped flat at beam height."},
+    {"surface": "whiteboard", "distances_m": [0.65, 1.0], "angles_deg": [20, 40],
+     "note": "Rotate the aircraft about its vertical axis; keep the sensor window over the same mark."},
+    {"surface": "open_space", "distances_m": [null], "angles_deg": [0],
+     "note": "Point the sensor at empty space with nothing within 3 m; expect out-of-range replies."},
+    {"surface": "blocked", "distances_m": [null], "angles_deg": [0],
+     "note": "Hold a card about 3 cm in front of the sensor window."}
+  ]
+}

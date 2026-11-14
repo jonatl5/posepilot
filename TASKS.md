@@ -13,11 +13,26 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [x] Add schema, timestamp, arrival, marker, range and replay regression tests.
 - [x] Provide an English data plan, hardware gates, control explanation, source archive and synchronized repository/website PRD.
 
-## Before delivery
+## Platform research (aircraft delivered by November 5, 2026)
 
-- [ ] Record and label real wall prints, distractors and negative clips.
-- [ ] Choose two or three target classes from measured pretrained-detector reliability.
-- [ ] Fit per-print visual scale on calibration-only data and benchmark held-out detection.
+- [x] Summarize TT control paths, sensor/telemetry interfaces and their consequences in [TT_PLATFORM.md](research/TT_PLATFORM.md).
+- [x] Choose the recording route: TT camera through the Tello app during manual flight, with a per-clip shot list in [RECORDING_PLAN.md](research/RECORDING_PLAN.md).
+- [ ] Record the delivered unit's aircraft firmware, `sdk?`, `sn?`, `hardware?`, `EXT version?`, app version and expansion-controller mode (`objectpilot.tof_bench` stores the SDK replies in `session.json`).
+- [x] Add read-only identity queries (`sdk?`, `sn?`, `hardware?`, `battery?`, `wifi?`, `wifiversion?`) to the `GroundLink` allowlist with tests.
+
+## Perception data (TT camera, see [RECORDING_PLAN.md](research/RECORDING_PLAN.md))
+
+- [x] Session 0: app recordings are 1280×720 at 11–30 fps; camera tilts down about 10.5° ([TT_MEASUREMENTS.md](research/TT_MEASUREMENTS.md)).
+- [x] First screening: the backpack print fails with every pretrained size; the cup print passes with YOLO11s from 0.5 to 3.0 m.
+- [x] Stand calibration ladder for cup print A: k = 0.343 (YOLO11s), recorded in `configs/tt_cup_measured.json` with `vertical_gate` 0.30.
+- [ ] Re-mount the cup center at 1.47 m and confirm framing at 0.65, 1.2 and 3.0 m.
+- [ ] Screen at least one more class and a held-out cup print B; record the cup A coverage, negatives and distractors listed in the recording plan status section.
+- [ ] Sessions 3–4: record the room R1 (train) and room R2 (validation) flight sets, negatives, distractors and occlusions.
+- [ ] Session 5: record the held-out print family, label every test frame and benchmark the pretrained detector.
+- [ ] Fine-tune only if the held-out benchmark shows a useful gap.
+
+## Simulation and controller
+
 - [x] Tune PID on tuning seeds 40000–40099 and select on validation seeds 30000–30099; reserve final test seeds 50000–50099 (simulation only, see [CONTROLLER_TUNING.md](research/CONTROLLER_TUNING.md)).
 - [x] Train three control-v2 PPO seeds at two training budgets and validate them on the same 100 scenarios.
 - [ ] Decide the three simulator findings that gains cannot fix: hold resets on brief detection loss, the near-entry latch against the ToF range, and supervisor creep past the minimum clearance.
@@ -26,8 +41,12 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 ## Hardware and flight
 
 - [ ] Identify exact aircraft, firmware, expansion board and sensor orientation.
-- [ ] Verify actual TT video, exposure-to-host delay and wireless behavior.
+- [ ] Verify actual TT video, exposure-to-host delay and wireless behavior in a laptop SDK session (the Tello app recordings cannot measure delay).
+- [x] Write the labeled forward-ToF bench procedure and tool ([TOF_BENCH.md](research/TOF_BENCH.md), `objectpilot.tof_bench`).
+- [ ] Run the ToF bench on whiteboard, cup print and dark print, then decide `forward_range_max_m`, `near_entry_m` and whether custom firmware is needed.
 - [ ] Compile/test firmware and validate sequence, sample age, invalid readings and query routing.
+- [x] Write the step calibration flight tool: allowlist, operator confirmation, abort-and-land rules, test-world rehearsal and analysis ([STEP_FLIGHT.md](research/STEP_FLIGHT.md), `objectpilot.step_flight`).
+- [ ] Fly the step calibration once and re-run `objectpilot.stepsim --noise` with its `noise.json`.
 - [ ] Measure physical command response, stopping drift, body/sensor offsets and battery effects.
 - [ ] Integrate one qualified flight sink, operator controls, confirmed landing and onboard link-loss behavior.
 - [ ] Complete repeated supervised PID approaches and record all failures/interventions.

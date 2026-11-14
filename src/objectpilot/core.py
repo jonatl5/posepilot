@@ -112,7 +112,8 @@ def parse_ext_tof(reply: str, timestamp: float) -> RangeSample:
     if not match:
         return RangeSample(None, timestamp, status="malformed")
     mm = int(match[1])
-    if mm in (0, 8192, 65535):
+    # The SDK guide documents 8192; the delivered TT replies 8190 beyond range (Nov 7 bench).
+    if mm == 0 or mm >= 8190:
         return RangeSample(None, timestamp, status="out_of_range")
     # Receipt time is not sensor sample time. Stock replies may contain a cache.
     return RangeSample(mm / 1000.0, timestamp, status="sample_age_unknown")
@@ -141,7 +142,7 @@ class CustomRangeParser:
         timestamp = request_start-age_ms/1000
         status = "ok"
         if not fresh_seq: status = "repeated_or_reset"
-        elif not valid or mm in (0,8192,65535): status = "sensor_invalid"
+        elif not valid or mm == 0 or mm >= 8190: status = "sensor_invalid"
         elif not 0 <= response_time-request_start <= .25 or response_time-timestamp > self.c.range_stale_s: status = "stale"
         return RangeSample(mm/1000 if status=="ok" else None,timestamp,"forward_custom",status,seq)
 
