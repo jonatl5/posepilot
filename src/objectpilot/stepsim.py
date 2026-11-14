@@ -97,6 +97,9 @@ class Noise:
     tof_oblique_excess: float = .35  # bench: 20 and 40 degree readings exceed D/cos
     tof_dropout: float = .01
     imu_drift_deg: float = .3       # assumed random walk of the state-stream yaw per command
+    move_scale_bias: float = 0.     # mean move scale - 1 (November 13 flight: moves fall about 8% short)
+    yaw_bias_deg: float = 0.        # fixed shortfall of every turn (November 13 flight: about 2 degrees)
+    tof_obs_sd_m: float = 0.        # ToF error shared by one hover's replies (flight sweep: about 1 cm)
 
 
 class StepWorld:
@@ -140,12 +143,13 @@ class StepWorld:
                                    box["w"]*(1+r.normal(0, n.size_sd)), box["h"]*(1+r.normal(0, n.size_sd)), .9))
             frames.append(detections)
         replies = []
+        shared = r.normal(0, n.tof_obs_sd_m) if n.tof_obs_sd_m else 0.
         for _ in range(self.frames):
             cos = math.cos(self.heading)
             reading = None
             if cos > .05:
                 ray = -self.x/cos
-                reading = (ray*(1+n.tof_oblique_excess*(1/cos-1))+n.tof_bias_m
+                reading = (ray*(1+n.tof_oblique_excess*(1/cos-1))+n.tof_bias_m+shared
                            + r.normal(0, n.tof_sd_m+.002*ray))
                 if reading > 1.22 or r.random() < n.tof_dropout:
                     reading = None
@@ -167,12 +171,13 @@ class StepWorld:
             self.time += .5
             return "error"
         if verb in ("cw", "ccw"):
-            turn = math.radians(value)*(1+r.normal(0, n.yaw_scale_sd))+math.radians(r.normal(0, n.yaw_sd_deg))
+            turn = (math.radians(max(0., value*(1+r.normal(0, n.yaw_scale_sd))-n.yaw_bias_deg))
+                    + math.radians(r.normal(0, n.yaw_sd_deg)))
             self.heading += turn if verb == "cw" else -turn
             self.time += value/75+.8
             self._drift()
             return "ok"
-        metres = value/100*(1+r.normal(0, n.move_scale_sd))
+        metres = value/100*(1+n.move_scale_bias+r.normal(0, n.move_scale_sd))
         cross = r.normal(0, .01+n.move_cross_sd*value/100)
         if verb in ("up", "down"):
             self.z += metres if verb == "up" else -metres
@@ -226,18 +231,23 @@ def run_episode(seed, config=None, camera=None, noise=None, imu=True, keep_log=F
                             heading_deg=round(math.degrees(world.heading), 1)))
         if decision.outcome:
             break
-    t = s["target"]
-    heading_error = math.degrees(math.atan2(math.sin(world.heading), math.cos(world.heading)))
     result = dict(seed=seed, label=s["label"], start_distance_m=round(s["distance_m"], 3),
                   start_view_deg=round(s["view_deg"], 1), start_heading_offset_deg=round(s["heading_offset_deg"], 1),
                   outcome=planner.outcome, commands=planner.commands, observations=planner.observations,
-                  time_s=round(world.time, 1), perpendicular_m=round(-world.x, 3),
-                  lateral_m=round(world.y-t.y, 3), heading_error_deg=round(heading_error, 1),
-                  min_clearance_m=round(world.min_clearance, 3), squared=planner.squared)
-    result["success"] = bool(result["outcome"] == "arrived"
-                             and abs(result["perpendicular_m"]-.65) <= .08 and abs(result["lateral_m"]) <= .08
-                             and abs(heading_error) <= 8 and world.min_clearance >= .40)
+                  time_s=round(world.time, 1), **final_metrics(world, s["target"], planner.outcome),
+                  squared=planner.squared)
     return (result, log) if keep_log else result
+
+
+def final_metrics(world, target, outcome, stand_off_m=.65, minimum_m=.40):
+    """True final pose against the print, and the success rule used for every result table."""
+    heading_error = math.degrees(math.atan2(math.sin(world.heading), math.cos(world.heading)))
+    metrics = dict(perpendicular_m=round(-world.x, 3), lateral_m=round(world.y-target.y, 3),
+                   heading_error_deg=round(heading_error, 1), min_clearance_m=round(world.min_clearance, 3))
+    metrics["success"] = bool(outcome == "arrived" and abs(metrics["perpendicular_m"]-stand_off_m) <= .08
+                              and abs(metrics["lateral_m"]) <= .08 and abs(heading_error) <= 8
+                              and world.min_clearance >= minimum_m)
+    return metrics
 
 
 VARIANTS = {
@@ -260,7 +270,7 @@ def evaluate(variant, seeds, base_noise=None):
     return [run_episode(seed, config, camera, noise, imu=spec.get("imu", True)) for seed in seeds]
 
 
-def summarize_results(rows):
+def summarize_results(rows, stand_off_m=.65):
     def median(key, subset):
         values = sorted(abs(r[key]) for r in subset)
         return round(values[len(values)//2], 3) if values else None
@@ -276,7 +286,7 @@ def summarize_results(rows):
                 outcomes=outcomes, success_by_start_view=by_view,
                 arrived_median_abs_heading_error_deg=median("heading_error_deg", arrived),
                 arrived_median_abs_lateral_m=median("lateral_m", arrived),
-                arrived_median_abs_distance_error_m=(round(sorted(abs(r["perpendicular_m"]-.65) for r in arrived)[len(arrived)//2], 3)
+                arrived_median_abs_distance_error_m=(round(sorted(abs(r["perpendicular_m"]-stand_off_m) for r in arrived)[len(arrived)//2], 3)
                                                      if arrived else None),
                 median_commands=sorted(r["commands"] for r in rows)[len(rows)//2],
                 median_time_s=sorted(r["time_s"] for r in rows)[len(rows)//2],
