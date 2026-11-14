@@ -277,7 +277,7 @@ Current evidence: Team grouped-data tools retained; collection, label validation
 
 ## Evidence links
 
-- [Wall-track diagnostics](https://jonatl5.github.io/posepilot/#results)
+- [Wall-track diagnostics](https://jonatl5.github.io/posepilot/archive-2026-10-29.html#results)
 - [Aligned rapid prototypes](https://jonatl5.github.io/posepilot/prototypes.html)
 - [Website PRD](https://jonatl5.github.io/posepilot/prd.html)
 

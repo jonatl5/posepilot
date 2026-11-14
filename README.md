@@ -1,10 +1,20 @@
 # objectPilot
 
-Recognize a stationary printed object on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A PC runs YOLO, a PID baseline or PPO policy, and independent supervision. The working product name is objectPilot; the repository and Pages URL remain posepilot.
+Fly a RoboMaster TT to a printed picture on a wall and stop square in front of it. A laptop runs YOLO11s on the drone's video, reads the forward ToF sensor and, after every hover, sends one discrete SDK step chosen by the stop-and-go planner. The October streaming route (PID or PPO on a 64-value observation) remains in the repository as the baseline it replaced. The working product name is objectPilot; the repository and Pages URL remain posepilot.
 
 [Website](https://jonatl5.github.io/posepilot/) · [PRD](PRD.md) · [TT control audit](research/TT_CONTROL_AUDIT.md) · [Route comparison](research/ALIGNMENT.md) · [Control mapping](research/ARCHITECTURE.md) · [Data plan](research/DATA_COLLECTION.md) · [TT recording plan](research/RECORDING_PLAN.md) · [TT platform](research/TT_PLATFORM.md) · [Hardware gates](research/HARDWARE_GATES.md)
 
-## One implementation route
+## Current route: stop-and-go step planner
+
+Hover, observe (6 frames, 6 forward ToF replies, the state-stream yaw), send one SDK step, repeat. A ToF yaw sweep finds the wall's normal so the aircraft squares up before the final approach. Status, flights and results: [website](https://jonatl5.github.io/posepilot/), [STEPWISE.md](research/STEPWISE.md), [STEP_FLIGHT.md](research/STEP_FLIGHT.md), [STEP_APPROACH.md](research/STEP_APPROACH.md).
+
+```bash
+python -m objectpilot.step_approach simulate --episodes 300 --noise configs/tt_step_noise_measured.json --out runs/approach-sim
+python -m objectpilot.step_approach fly --class-name cup --weights models/yolo11s.pt --height-cm 157 --out runs/approach-01
+python -m objectpilot.step_flight fly --out runs/step-cal-02 --weights models/yolo11s.pt
+```
+
+## October streaming route (PID/PPO baseline)
 
 The repository now includes the implementation from the team's October 29 starter package and aligned additions. The primary target remains a matte wall print detected by YOLO11n. Red cards and ArUco markers are optional bench inputs into the same pipeline; they do not define another policy, simulator or deployment route.
 
@@ -128,7 +138,7 @@ python scripts/check_repository.py
 npm start
 ```
 
-Edit `docs/data/prd.json` and regenerate `PRD.md`, `docs/PRD.md` and `docs/prd.html` together. The language check covers published text and code comments. The source archive is built from an explicit allowlist and excludes environments, credentials, local logs, private data and model weights. Open `http://127.0.0.1:4317/posepilot/` to preview. GitHub Pages publishes `/docs` from `main`; an unmerged/local branch does not update the public site.
+`docs/index.html` (with `site.css` and `site.js`) is the current status page; the October homepage, PRD, prototype, audit and plan pages are kept as archived pages with a banner. Edit `docs/data/prd.json` and regenerate `PRD.md`, `docs/PRD.md` and `docs/prd.html` together. The language check covers published text and code comments. The source archive is built from an explicit allowlist and excludes environments, credentials, local logs, private data and model weights. Open `http://127.0.0.1:4317/posepilot/` to preview. GitHub Pages publishes `/docs` from `main`; an unmerged/local branch does not update the public site.
 
 ## License
 

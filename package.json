@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/preview.mjs",
-    "check": "node --check docs/app.js && node --check docs/prototypes.js && node --check scripts/build-prd.mjs && node scripts/check-site.mjs",
+    "check": "node --check docs/app.js && node --check docs/prototypes.js && node --check docs/site.js && node --check scripts/build-prd.mjs && node scripts/check-site.mjs",
     "build:docs": "node scripts/build-prd.mjs"
   },
   "engines": {
