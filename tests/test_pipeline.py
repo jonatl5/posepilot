@@ -8,7 +8,7 @@ def det(t=0,frame=0,cx=.5,height=.25): return Detection(cx,.5,.3,height,.9,t,fra
 
 def test_ext_range_units_sentinel_and_telemetry_rejection():
     assert parse_ext_tof("tof 650\r\n",0).distance_m==.65
-    for reply in ("tof 8192","tof 65535","tof 0","tof:65;h:70;","650mm","error"):
+    for reply in ("tof 8190","tof 8191","tof 8192","tof 65535","tof 0","tof:65;h:70;","650mm","error"):
         assert parse_ext_tof(reply,0).distance_m is None
 
 def test_invalid_or_stale_data_stops_and_near_latches():

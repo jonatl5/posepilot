@@ -1,10 +1,14 @@
 # Data collection and training plan
 
-## What can be done before delivery
+## Recording source after delivery
+
+The aircraft was delivered by November 5, 2026. Detector footage now comes from the TT camera itself, recorded with the Tello app while a pilot flies manually. The shot list, clip durations, coverage, session order and battery budget are in [RECORDING_PLAN.md](RECORDING_PLAN.md). The guidance below still applies. Phone or webcam clips are optional pre-screening only; a phone camera's visual scale and image domain do not transfer to the TT.
+
+## Targets and coverage
 
 Start with pretrained YOLO11n and a small set of matte wall prints. Choose two or three COCO classes from observed detection reliability, for example bottle, backpack or cup. Try three to five source pictures per class. Print size, image content, cropping and camera field of view affect the detected box; the paper dimensions are not the object-box dimensions.
 
-Record 20–40 second phone or webcam clips at the intended camera height. Cover centered approaches, yaw, lateral offsets, pauses, motion blur, partial crops, occlusion/reappearance, distractor posters, two objects of the same class and empty walls. Vary rooms, dates and lighting. A starting collection of 15–25 clips per class and 20–30% negative/distractor clips is a planning estimate, not a guarantee of sufficient data.
+Record 20–40 second clips at the intended camera height. Cover centered approaches, yaw, lateral offsets, pauses, motion blur, partial crops, occlusion/reappearance, distractor posters, two objects of the same class and empty walls. Vary rooms, dates and lighting. A starting collection of 15–25 clips per class and 20–30% negative/distractor clips is a planning estimate, not a guarantee of sufficient data.
 
 Use a tape measure for stationary reference points at 0.4, 0.5, 0.65, 0.8, 1.0, 1.2, 1.5, 2.0, 2.5 and 3.0 m. Near points are handheld calibration measurements, not permitted flight distances. Record whether distance is measured from the camera, sensor or body, plus the mounting offsets. Hold at each point for two or three seconds. A moving clip must not assign a single constant ground-truth distance to every frame.
 

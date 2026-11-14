@@ -92,7 +92,7 @@
         <tr><th scope="row">PPO · 100,352 steps</th><td>46.7%</td><td>30.2–63.9%</td><td>0</td><td><a href="./evidence/ppo-episodes.csv" download>CSV ↓</a></td></tr>
         <tr><th scope="row">PPO · 8,192 steps</th><td>0%</td><td>0–11.4%</td><td>0</td><td><a href="./evidence/ppo_smoke-episodes.csv" download>CSV ↓</a></td></tr>
       </tbody></table></div>
-      <p class="evidence-note">PID remains the baseline. These short, single-seed PPO runs do not establish a final comparison. The diagnostic scenarios are now development data; final evaluation needs new held-out seeds, tuned controllers and hardware trials. Zero simulated distance violations is not evidence of real-flight safety.</p>
+      <p class="evidence-note">PID remains the baseline. These short, single-seed PPO runs do not establish a final comparison. The diagnostic scenarios are now development data; final evaluation needs new held-out seeds, tuned controllers and hardware trials. Zero simulated distance violations is not evidence of real-flight safety. The <a href="./alignment.html#tuning">October 31 tuning evidence</a> compares tuned PID and control-v2 PPO seeds on 100 new validation scenarios.</p>
     </div></section>
 
     <section class="section-wrap content-section" id="architecture">
@@ -108,7 +108,7 @@
 
     <section class="section-wrap content-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow">05 / COURSE MILESTONES</div><h2>From the prototype to the demo.</h2></div><p>Dates follow the course plan. Expected drone arrival is approximately November 4; calibration comes before autonomous trials.</p></div><ol class="timeline">
       <li><div class="timeline-time">OCT 29</div><div class="timeline-body"><h3>Rapid prototypes</h3><p>Dry-run pipeline, initial PID/PPO comparison, data tools and ESP32 extension preparation.</p></div><span class="planned done">Complete</span></li>
-      <li><div class="timeline-time">OCT 30–NOV 3</div><div class="timeline-body"><h3>Collect prints and present progress</h3><p>Record phone footage, benchmark the detector and show the simulation at the November 3 status presentation.</p></div><span class="planned">Next</span></li>
+      <li><div class="timeline-time">OCT 30–NOV 3</div><div class="timeline-body"><h3>Collect prints and present progress</h3><p>Record phone footage, benchmark the detector and show the simulation at the November 3 status presentation. PID gains were tuned and three PPO seeds validated in simulation on October 31.</p></div><span class="planned">In progress</span></li>
       <li><div class="timeline-time">NOV 4–7</div><div class="timeline-body"><h3>Bring up the TT and measure</h3><p>Verify forward range, compile firmware, calibrate the camera and measure delay, braking and command response.</p></div><span class="planned">Planned</span></li>
       <li><div class="timeline-time">NOV 8–19</div><div class="timeline-body"><h3>Validate the PID approach</h3><p>Supervised printed-wall trials and TT-specific data. Peer Review 1: November 10, noon Pacific.</p></div><span class="planned">Planned</span></li>
       <li><div class="timeline-time">NOV 20–DEC 3</div><div class="timeline-body"><h3>Compare calibrated controllers</h3><p>Multiple PPO seeds, matched trials and measured failures. Freeze features on December 3.</p></div><span class="planned">Planned</span></li>

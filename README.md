@@ -2,7 +2,7 @@
 
 Recognize a stationary printed object on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A PC runs YOLO, a PID baseline or PPO policy, and independent supervision. The working product name is objectPilot; the repository and Pages URL remain posepilot.
 
-[Website](https://jonatl5.github.io/posepilot/) · [PRD](PRD.md) · [TT control audit](research/TT_CONTROL_AUDIT.md) · [Route comparison](research/ALIGNMENT.md) · [Control mapping](research/ARCHITECTURE.md) · [Data plan](research/DATA_COLLECTION.md) · [Hardware gates](research/HARDWARE_GATES.md)
+[Website](https://jonatl5.github.io/posepilot/) · [PRD](PRD.md) · [TT control audit](research/TT_CONTROL_AUDIT.md) · [Route comparison](research/ALIGNMENT.md) · [Control mapping](research/ARCHITECTURE.md) · [Data plan](research/DATA_COLLECTION.md) · [TT recording plan](research/RECORDING_PLAN.md) · [TT platform](research/TT_PLATFORM.md) · [Hardware gates](research/HARDWARE_GATES.md)
 
 ## One implementation route
 
@@ -17,7 +17,7 @@ The repository now includes the implementation from the team's October 29 starte
 
 These are unqualified simulation parameters, not approved physical clearances. Read the [exact feature/action contract](research/interfaces.md) and [hardware gates](research/HARDWARE_GATES.md) before any flight integration.
 
-## Run before the drone arrives
+## Run without the drone
 
 Use Python 3.10–3.13; Python 3.12 is recommended. Create an environment from this repository root:
 
@@ -36,6 +36,18 @@ Open `runs/demo-pid/demo.html` to play, pause and scrub the team's offline simul
 
 On Windows PowerShell, create the environment with `py -3.12 -m venv .venv`, then set `$opPython = (Resolve-Path .\.venv\Scripts\python.exe).Path` and replace each `python` invocation with `& $opPython`. This does not require changing execution policy. The historical Windows freeze is archived in `research/team-windows-requirements.txt`; it is not an installation file. Use the same `pyproject.toml` extras on every platform. Only install one OpenCV distribution: `opencv-python>=4.10,<5`, which includes the ArUco APIs used here. Start a clean environment if an older setup contains both standard and contrib wheels. Add `--show` for the camera/video window. Synthetic image input exercises OpenCV and control interfaces; it is not a drone dynamics simulation. `objectpilot.evaluate` runs the action-responsive wall simulator. Output logs and evaluation folders must be new so previous evidence is preserved. The optional SB3 environment check is skipped unless the RL extra is installed.
 
+## Tune the PID baseline and reserve the final test
+
+Scenario seeds are the simulator's only randomness, so seed ranges partition the scenarios. Seeds 10000–10029 and 20000–20029 are inspected development diagnostics. Seeds 40000–40099 tune PID gains, seeds 30000–30099 select between controllers and training seeds, and seeds 50000–50099 are reserved for the frozen final comparison: `objectpilot.evaluate` and `objectpilot.demo` refuse them unless `--final-test` is passed at feature freeze, and `objectpilot.tune_pid` never accepts them.
+
+```bash
+python -m objectpilot.tune_pid --config configs/wall_approach.json --out runs/pid-tuning
+python -m objectpilot.evaluate --config configs/wall_approach.json --gains configs/pid_gains_tuned.json --episodes 100 --seed 30000 --out runs/pid-tuned-validation
+python -m objectpilot.demo --config configs/wall_approach.json --gains configs/pid_gains_tuned.json --out runs/demo-pid-tuned
+```
+
+The tuning command runs every grid candidate on the tuning seeds, re-runs the shortlist and the starting gains on the validation seeds, and writes `selected_gains.json` with the complete selection record. [configs/pid_gains_tuned.json](configs/pid_gains_tuned.json) is the October 31 candidate selected that way: on the 100 validation scenarios it completed 92 approaches against 87 for the starting gains, both with zero minimum-distance violations. Gains are controller parameters, not part of the observation/config contract; `--gains` applies to evaluate, demo and replay, never together with `--model`, and every PID output records the gains in use. The candidate is a simulation result: RC response, braking and sensor timing are uncalibrated, so re-tune after the hardware gates. [research/CONTROLLER_TUNING.md](research/CONTROLLER_TUNING.md) records the protocol, the control-v2 PPO seeds and three simulator findings that gains cannot fix.
+
 ## YOLO and data
 
 ```bash
@@ -44,7 +56,7 @@ python -m objectpilot.replay --source 0 --class-name bottle --weights yolo11n.pt
 python -m objectpilot.replay --source data/raw/approach.mp4 --class-name bottle --out runs/video.jsonl
 ```
 
-The first YOLO run may download pretrained weights; do this before joining aircraft Wi-Fi. Start with pretrained detection, collect a held-out wall-print benchmark and fine-tune only if the measured gap warrants it. The [English data guide](research/DATA_COLLECTION.md) covers grouped recording, explicit negatives, annotations, visual-scale calibration and detector training/evaluation. No real target dataset or new detector weights are claimed.
+The first YOLO run may download pretrained weights; do this before joining aircraft Wi-Fi. Start with pretrained detection, collect a held-out wall-print benchmark and fine-tune only if the measured gap warrants it. The [English data guide](research/DATA_COLLECTION.md) covers grouped recording, explicit negatives, annotations, visual-scale calibration and detector training/evaluation. No real target dataset or new detector weights are claimed. Now that the aircraft has arrived, footage is recorded with the TT camera through the Tello app; the [TT recording plan](research/RECORDING_PLAN.md) lists every shot, its duration and coverage, and the session order. Published TT control paths and sensor interfaces are summarized in [TT_PLATFORM.md](research/TT_PLATFORM.md).
 
 ## Grounded TT video and range
 
@@ -52,9 +64,12 @@ The first YOLO run may download pretrained weights; do this before joining aircr
 python -m pip install -e '.[markers,video,hardware]'
 python -m objectpilot.replay --source tello --detector aruco --range-mode stock --out runs/tt-ground.jsonl --show
 python -m objectpilot.bench --seconds 15 --out runs/tof-bench.jsonl
+python -m objectpilot.tof_bench --surfaces whiteboard --out runs/tof/session-whiteboard
 ```
 
-Replay and collection never send takeoff, landing or RC commands. `GroundLink` has a strict ground-command allowlist. Stock `EXT tof?` receipts do not establish sample freshness and cannot authorize near approach or arrival. A recently received close stock value can still stop the proposed motion. Use `--range-mode custom` only after the prepared firmware's sequence/validity/age reply is qualified on the delivered hardware.
+`objectpilot.tof_bench` is the labeled, motors-off forward-ToF procedure for hardware gate 3; follow [research/TOF_BENCH.md](research/TOF_BENCH.md). First TT camera measurements (YOLO11s on the cup print, k = 0.343, camera tilt about 10.5°) are in [research/TT_MEASUREMENTS.md](research/TT_MEASUREMENTS.md); use `--config configs/tt_cup_measured.json --weights models/yolo11s.pt --class-name cup` for replay on the real aircraft. `configs/wall_approach.json` remains the simulator and PPO configuration.
+
+Replay and collection never send takeoff, landing or RC commands. `GroundLink` has a strict ground-command allowlist. The only module that flies is `objectpilot.step_flight`: a supervised step calibration flight with its own allowlist (discrete SDK steps, no `rc`), operator confirmation and abort-and-land rules. It completed its first flight on November 13, 2026; results and the procedure are in [research/STEP_FLIGHT.md](research/STEP_FLIGHT.md). Stock `EXT tof?` receipts do not establish sample freshness and cannot authorize near approach or arrival. A recently received close stock value can still stop the proposed motion. Use `--range-mode custom` only after the prepared firmware's sequence/validity/age reply is qualified on the delivered hardware.
 
 `dispatch.py` supplies a separately tested command-age/operator-heartbeat watchdog scaffold with an injected sink. It is not connected to a live flight CLI, has no takeoff command and is not hardware qualified. A future adapter must provide bounded I/O, manual takeover, confirmed landing and measured onboard link-loss behavior. Do not replace those checks with a boolean flight flag.
 
@@ -67,7 +82,7 @@ python -m objectpilot.evaluate --config configs/wall_approach.json --model runs/
 python -m objectpilot.demo --config configs/wall_approach.json --model runs/ppo-seed0/policy.zip --out runs/demo-ppo
 ```
 
-Train multiple seeds and compare tuned PID, nominal PPO and randomized PPO under matched settings. Use validation to select models and reserve new final test scenarios. Train, evaluate, demo and replay all accept `--config`. Use the same JSON file in each command. Policies must match the complete Config, ordered features, action names, actual tensor spaces and `objectpilot-control-v2` behavior version. Older checkpoints require retraining, including previous 64-input checkpoints without this behavior version. Video is not an interactive PPO environment. The default baseline remains PID unless a qualified alternative is more reliable.
+Train multiple seeds and compare tuned PID, nominal PPO and randomized PPO under matched settings. Seeds 30000–30099 are the validation scenarios used for selection; seeds 50000–50099 stay reserved until feature freeze. Train, evaluate, demo and replay all accept `--config`. Use the same JSON file in each command. Policies must match the complete Config, ordered features, action names, actual tensor spaces and `objectpilot-control-v2` behavior version. Older checkpoints require retraining, including previous 64-input checkpoints without this behavior version. Video is not an interactive PPO environment. The default baseline remains PID unless a qualified alternative is more reliable.
 
 ## Evidence and provenance
 
@@ -76,6 +91,8 @@ The original team run reported 15 tests and a ten-sample blank-video check. Its 
 The current [TT audit](research/TT_CONTROL_AUDIT.md) compares both contributors and public projects. New [control-v2 evidence](docs/evidence/control-v2/README.md) is separate from earlier results. Simulation and replay now use the same target confirmation, arrival/stop gate and RC quantization; physical truth audits simulation success without changing the command gate.
 
 Historical integration evidence is recorded in [research/INTEGRATION_VALIDATION.md](research/INTEGRATION_VALIDATION.md) and [machine-readable validation](docs/evidence/integration/validation.json). The team's later repository/demo verification remains in [research/validation.md](research/validation.md). The earlier standalone marker scores are not pooled with the team's results. No actual drone flight, sensor qualification or firmware compilation/flash is claimed.
+
+The October 31 [controller tuning record](research/CONTROLLER_TUNING.md) and its [evidence folder](docs/evidence/control-v2/tuning/README.md) add the tuned PID candidate, three control-v2 PPO training seeds at two budgets and the reserved final test seeds. These are validation-seed results on the uncalibrated simulator; the reserved seeds have not been run.
 
 The imported source is identified in [source-provenance.json](research/source-provenance.json). Original team authorship/license remains in place. The [alignment review](research/ALIGNMENT.md) explains reused components, additions and retired conflicting settings.
 
@@ -89,9 +106,13 @@ The imported source is identified in [source-provenance.json](research/source-pr
 | `src/objectpilot/replay.py`, `video.py`, `ground_link.py` | File, webcam, synthetic and ground-only Tello input |
 | `src/objectpilot/dispatch.py` | Independent watchdog scaffold; fake-I/O tests |
 | `src/objectpilot/env.py`, `train.py`, `evaluate.py`, `demo.py` | Team simulator, offline HTML demo and PPO/PID research workflow |
+| `src/objectpilot/tune_pid.py` | PID gain grid on tuning seeds, validation selection and the selection record |
 | `src/objectpilot/data.py`, `collect.py`, `calibrate_camera.py` | Collection, labels, splitting, training and calibration |
 | `firmware/` | Reviewed extension generator and optional external ToF starting point |
 | `configs/wall_approach.json` | Canonical initial Config, not a flight qualification |
+| `configs/tt_cup_measured.json` | Measured TT camera values for the cup print (k, vertical gate); not flight qualified |
+| `configs/tof_bench_plan.json`, `src/objectpilot/tof_bench.py` | Forward-ToF bench plan and guided session tool |
+| `configs/pid_gains_tuned.json` | Tuned PID candidate selected on validation seeds; not hardware calibrated |
 | `research/`, `tests/` | English plans, provenance, evidence and regression checks |
 | `docs/` | GitHub Pages source, English PRD and published evidence |
 

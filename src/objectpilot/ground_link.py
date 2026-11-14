@@ -6,10 +6,15 @@ from .core import CustomRangeParser, RangeSample, parse_ext_tof
 
 
 class GroundLink:
-    ALLOWED = frozenset(("command", "streamon", "streamoff", "EXT tof?", "EXT oprange?", "EXT version?"))
+    # Read-only identity/status queries: any non-error reply is their answer.
+    READ_ONLY = frozenset(("sdk?", "sn?", "hardware?", "battery?", "wifi?", "wifiversion?", "EXT version?"))
+    ALLOWED = frozenset(("command", "streamon", "streamoff", "EXT tof?", "EXT oprange?")) | READ_ONLY
 
-    def __init__(self, host="192.168.10.1", local_port=8889, config=None):
+    def __init__(self, host="192.168.10.1", local_port=8889, config=None, remote_port=8889):
         self.host = socket.gethostbyname(host)
+        self.remote_port = remote_port
+        self.ignored_lines = 0
+        self.last_flushed, self.last_unmatched = [], []
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             self.socket.bind(("", local_port))
@@ -23,42 +28,79 @@ class GroundLink:
         self.worker = None
         self.streaming = False
 
+    def permitted(self, command):
+        """Whether this link may send `command`. GroundLink: ground-only allowlist."""
+        return command in self.ALLOWED
+
     def request(self, command, timeout=.5):
-        if command not in self.ALLOWED:
-            raise ValueError("GroundLink permits only video setup and range/version queries")
+        if not self.permitted(command):
+            raise ValueError(f"{type(self).__name__} does not permit {command!r}")
         with self.lock:
+            # Late replies to earlier queries are discarded here but kept for diagnosis.
+            self.last_flushed, self.last_unmatched = [], []
             self.socket.settimeout(.001)
             try:
                 while True:
-                    self.socket.recvfrom(2048)
-            except socket.timeout:
+                    raw, _ = self.socket.recvfrom(2048)
+                    self.last_flushed.append(raw.decode("ascii", errors="replace").strip())
+            except (socket.timeout, ConnectionResetError):
                 pass
             start = time.monotonic()
-            self.socket.sendto(command.encode("ascii"), (self.host, 8889))
+            self.socket.sendto(command.encode("ascii"), (self.host, self.remote_port))
             while time.monotonic()-start < timeout:
-                self.socket.settimeout(max(.001, timeout-(time.monotonic()-start)))
+                # Short waits keep Ctrl+C responsive during long move replies on Windows.
+                self.socket.settimeout(min(.2, max(.001, timeout-(time.monotonic()-start))))
                 try:
                     raw, peer = self.socket.recvfrom(2048)
                 except socket.timeout:
-                    break
+                    continue
                 if peer[0] != self.host:
                     continue
                 reply = raw.decode("ascii", errors="replace").strip()
-                if reply.lower().startswith(("error", "unknown")):
+                lower = reply.lower()
+                if lower.startswith("unknown command"):
+                    # The TT expansion controller forwards replies to its own traffic, e.g.
+                    # "unknown command: keepalive"; only a rejection of this command is an error.
+                    named = reply.split(":", 1)[1].strip() if ":" in reply else ""
+                    if named and named != command:
+                        self.ignored_lines += 1
+                        continue
+                    raise RuntimeError(reply)
+                if lower.startswith("error"):
                     raise RuntimeError(reply)
                 prefix = ("oprange " if command == "EXT oprange?" else
                           "tof " if command == "EXT tof?" else None)
                 if (prefix and reply.startswith(prefix)) or (prefix is None and
-                        (reply == "ok" or command == "EXT version?")):
+                        (reply == "ok" or command in self.READ_ONLY)):
                     return reply, start, time.monotonic()
+                self.last_unmatched.append(reply)
             raise TimeoutError(f"No matching reply to {command}")
 
-    def connect(self, range_mode="none"):
+    def listen(self, command, seconds):
+        """Diagnostic: send one allowed command and return every line received for `seconds`."""
+        if not self.permitted(command):
+            raise ValueError(f"{type(self).__name__} does not permit {command!r}")
+        lines = []
+        with self.lock:
+            start = time.monotonic()
+            self.socket.sendto(command.encode("ascii"), (self.host, self.remote_port))
+            while time.monotonic()-start < seconds:
+                self.socket.settimeout(max(.001, seconds-(time.monotonic()-start)))
+                try:
+                    raw, peer = self.socket.recvfrom(2048)
+                except (socket.timeout, ConnectionResetError):
+                    continue
+                lines.append((round(1000*(time.monotonic()-start)), peer[0],
+                              raw.decode("ascii", errors="replace").strip()))
+        return lines
+
+    def connect(self, range_mode="none", video=True):
         if range_mode not in ("none", "stock", "custom"):
             raise ValueError("Unknown range mode")
         self.request("command", 5.)
-        self.request("streamon", 5.)
-        self.streaming = True
+        if video:
+            self.request("streamon", 5.)
+            self.streaming = True
         if range_mode != "none":
             self.worker = threading.Thread(target=self._poll, args=(range_mode,), daemon=True)
             self.worker.start()

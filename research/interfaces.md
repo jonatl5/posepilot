@@ -29,3 +29,5 @@ Replay JSONL includes source timestamps, detections, range, observations, propos
 Starting assumptions: 0.65 m stand-off, 0.40 m minimum, 0.35 s image timeout, 0.40 s range timeout. Actual braking, body offsets, camera latency, independent range cadence, battery response and extrinsics need measurement. Both-axis overlap remains a proxy, not proof that a beam hit a 3D object. The first task is restricted to wall prints.
 
 All train/evaluate/demo/replay CLIs accept `--config`. The exact protocol/project and contributor comparison is in [TT_CONTROL_AUDIT.md](TT_CONTROL_AUDIT.md). Replay rows now include a separate control-contract version alongside the unchanged 64-value observation schema.
+
+PID gains are controller parameters outside this contract: `PIDGains` defaults to the starting gains, `--gains` loads a selected file in evaluate, demo and replay, and every PID row/summary records `pid_gains`. Seed ranges partition the simulator scenarios (development 10000–10029 and 20000–20029, validation 30000–30099, tuning 40000–40099, final test 50000–50099 reserved until feature freeze); see [CONTROLLER_TUNING.md](CONTROLLER_TUNING.md).

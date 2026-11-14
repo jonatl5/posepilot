@@ -1,6 +1,6 @@
 # objectPilot Product Requirements
 
-TT control alignment edition · October 29, 2026
+Hardware delivery edition · November 5, 2026
 
 Aligned with the team's October 29, 2026 Revision 2 PRD. [Source PRD](https://docs.google.com/document/d/1kxEY6A_N0bDsK6_wongQXkz956Aoth89/edit).
 
@@ -10,11 +10,13 @@ Generated from docs/data/prd.json. Run npm run build:docs after editing the sour
 
 Recognize a stationary printed object image on a wall, center it in the RoboMaster TT camera, approach slowly and hold a measured stand-off. A laptop runs YOLO11n, a PID baseline or PPO policy, and an independent supervisor. The ESP32 expansion supplies forward infrared time-of-flight measurements.
 
-The primary demonstration uses matte wall prints, normal indoor lighting and fixed altitude. Physical three-dimensional objects require a separate validation stage. The aircraft is still awaiting delivery; no real TT flight or sensor qualification is claimed.
+The primary demonstration uses matte wall prints, normal indoor lighting and fixed altitude. Physical three-dimensional objects require a separate validation stage. The aircraft was delivered by November 5, 2026; no qualified TT flight or sensor result is claimed yet.
 
 The repository now contains the team starter implementation and aligned additions. YOLO wall prints remain the demonstration target. ArUco/red-card inputs are bench fixtures using the same 64-value contract, PID/PPO interface and supervisor.
 
 A follow-up audit of both contributors and public TT/Tello projects aligns simulation and camera replay under objectpilot-control-v2. Observation layout remains 16 x 4; old PPO checkpoints require retraining.
+
+An October 31 follow-up tunes the PID gains on tuning seeds, selects on validation seeds, trains three control-v2 PPO seeds at two budgets and reserves seeds 50000–50099 for the frozen final comparison. Three simulator findings await a team decision.
 
 | Area | Requirement |
 | --- | --- |
@@ -65,7 +67,7 @@ Priority: Must.
 
 Deterministic PPO inference on the laptop; save model, config, scaling, schema and seed together.
 
-Current evidence: Shared JSON config accepted by train/evaluate/demo/replay; old behavior checkpoints rejected; new qualification pending.
+Current evidence: Shared JSON config accepted by train/evaluate/demo/replay; old behavior checkpoints rejected; three control-v2 seeds trained at 100k and 1M transitions and validated on 100 scenarios, best 85/100; checkpoint freeze pending hardware.
 
 ### F6 · Baseline
 
@@ -73,7 +75,7 @@ Priority: Must.
 
 Configurable PID using the same observation and supervisor; tune on validation scenarios.
 
-Current evidence: Initial gains evaluated; tuning and hardware response calibration pending.
+Current evidence: Gains tuned on tuning seeds and selected on validation seeds, configs/pid_gains_tuned.json, 92/100 against 87/100 for the starting gains; hardware response calibration pending.
 
 ### F7 · Control
 
@@ -97,7 +99,7 @@ Priority: Must.
 
 Reject stale/missing detections, invalid actions, stale telemetry and near-range loss. Close raw range overrides association.
 
-Current evidence: Stale input, near-range loss, invalid state and raw proximity guards covered by software checks.
+Current evidence: Stale input, near-range loss, invalid state and raw proximity guards covered by software checks; simulation shows a policy can creep past the minimum clearance (no hysteresis, oblique range over-read and lag), pending a control-v3 decision.
 
 ### F10 · Flight gate
 
@@ -129,7 +131,7 @@ Priority: Must.
 
 Planar wall-target environment with first-order response, action/observation delay, noise and dropout; seeded reset.
 
-Current evidence: Planar simulator and initial comparisons completed.
+Current evidence: Planar simulator and initial comparisons completed; dropout hold resets and the near-entry/ToF-range margin recorded as open findings.
 
 ### F14 · Calibration
 
@@ -207,7 +209,7 @@ Current evidence: Team grouped-data tools retained; collection, label validation
 
 ## Data and calibration
 
-- Record real printed targets in the intended room: approaches, yaw, pauses, occlusions, partial crops, distractors and empty walls. Use marked distances and a repeatable camera height; a moving clip cannot use one distance label for every frame.
+- Record real printed targets with the TT camera through the Tello app during manual flight, following the per-clip shot list in research/RECORDING_PLAN.md: approaches, yaw, pauses, occlusions, partial crops, distractors and empty walls. These recordings carry no range, telemetry or command log; latency, range and response come from separate laptop SDK sessions. Use marked distances and a repeatable camera height; a moving clip cannot use one distance label for every frame.
 
 - Start with pretrained YOLO11n. Fine-tune only when held-out tests show a useful gap. Review detection boxes and explicit negative labels; split by recording session, room and print family rather than adjacent frames.
 
@@ -222,15 +224,16 @@ Current evidence: Team grouped-data tools retained; collection, label validation
 | Original team diagnostics | 15 reported automated checks; 30 scenarios, seeds 10000–10029. Initial PID 30/30, PPO at 100,352 transitions 14/30, PPO at 8,192 transitions 0/30. Published results and trace are preserved verbatim. |
 | Integrated implementation | Integrated on top of the teammate source publication at 50d18b8. The offline demo, template, tests and CI are retained. Shared 64-value camera pipeline, marker bench inputs, grounded video/range capture, measured arrival and dispatcher fault checks added; 33 local tests pass, one optional SB3 check skipped. See the dated integration validation record. |
 | Control-v2 audit | Official SDK and six public project/library references reviewed. Shared gate, target confirmation, RC quantization, configurable entrypoints and checkpoint checks implemented. New diagnostics are stored separately under docs/evidence/control-v2; older evidence remains unchanged. Windows and Linux CI each passed 46 tests without skips, including a nondefault-config PPO workflow and separate 1024-transition smoke run. |
+| Controller tuning | 324 PID gain candidates ranked on 50 tuning scenarios, shortlist selected on 100 validation scenarios: tuned 92/100, starting 87/100, zero minimum-distance violations. Three PPO seeds at 100k and 1M transitions: 34/15/80 and 76/67/85 successes, seed 1 with 77 and 29 violations. Final test seeds 50000–50099 reserved and unrun. |
 | Comparison boundary | The earlier local 11-input marker controller is superseded, not deployed. Its 50-scenario score and 52-test suite are not evidence for this integrated implementation. |
-| Hardware evidence | No TT flight, real printed-target accuracy, sensor cadence, firmware compilation/flashing or qualified braking margin is established. The dispatcher is tested with fake I/O only. |
+| Hardware evidence | November 5–7 stand measurements on the delivered TT camera: pretrained YOLO11s detects the cup print from 0.5 to 3.0 m (96–100% of frames), k = 0.343, camera tilted down about 10.5°; recorded in configs/tt_cup_measured.json with vertical_gate 0.30. No TT flight, forward-ToF accuracy or cadence, firmware compilation/flashing or qualified braking margin is established. The dispatcher is tested with fake I/O only. |
 
 
 ## Evaluation and acceptance
 
 - Retain PID as the demonstration baseline unless a qualified alternative is more reliable. Compare tuned PID, nominal PPO and randomized PPO with identical detector settings, action caps and supervisor.
 
-- Train at least three PPO seeds. Select checkpoints and gains using validation only, then freeze them. The 30 already-inspected diagnostic seeds are development data; use new held-out scenarios for the final comparison.
+- Train at least three PPO seeds. Select checkpoints and gains using validation seeds 30000–30099 only, then freeze them. Inspected diagnostic seeds and tuning seeds 40000–40099 are development data; the reserved seeds 50000–50099 are the final comparison and are run once, at feature freeze.
 
 - Start with 100 held-out simulated episodes per training seed. Aim for at least ten paired hardware trials per controller after hardware gates pass; report actual sample size, failures and interventions.
 
@@ -240,7 +243,7 @@ Current evidence: Team grouped-data tools retained; collection, label validation
 
 | Gate | Completion evidence required |
 | --- | --- |
-| G1 · Perception bench | Benchmark real wall prints, distractors and negatives; verify calibration and record timing distributions. |
+| G1 · Perception bench | Benchmark real wall prints, distractors and negatives recorded with the TT camera, including a held-out print family; verify per-print visual-scale calibration and record timing distributions. |
 | G2 · Platform and sensing | Identify firmware/board, verify query routing, sample freshness and camera/ToF geometry against measured distances. |
 | G3 · Flight dispatch | Qualify a single dispatcher, operator takeover, independent command-age watchdog, battery/telemetry handling and onboard link-loss behavior. |
 | G4 · Conservative PID flight | Measure command response, stopping drift and sensor-to-propeller offset; demonstrate repeated supervised approaches within the qualified envelope. |
@@ -254,8 +257,8 @@ Current evidence: Team grouped-data tools retained; collection, label validation
 | --- | --- |
 | Oct 29 | Rapid prototypes: separate synthetic-control and camera-only evidence. |
 | Oct 30–Nov 3 | Printed-target collection, detector benchmark and November 3 status presentation. |
-| Nov 4–7 | Approximate delivery, platform bring-up, camera/range tests and measured response. Arrival remains subject to confirmation. |
-| Nov 8–19 | Supervised PID trials and repeatability; Peer Review 1 due November 10 at noon Pacific. |
+| Nov 4–7 | Aircraft delivered. Platform identity, recording sessions 0–2 (bring-up, print screening, calibration ladders), first room recording set, camera/range bench and measured response. |
+| Nov 8–19 | Supervised PID trials and repeatability; remaining training/validation recordings and the held-out test recording with benchmark; Peer Review 1 due November 10 at noon Pacific. |
 | Nov 20–Dec 3 | Calibrated controller comparison; feature freeze December 3. |
 | Dec 4–15 | Rehearse December 4–9; demonstration December 10; final report and Peer Review 2 December 15 at noon Pacific. |
 
