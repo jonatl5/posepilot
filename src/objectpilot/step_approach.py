@@ -9,6 +9,7 @@ loop repeats until the planner reports an outcome. Then the aircraft lands.
 
     python -m objectpilot.step_approach simulate --episodes 300 --noise configs/tt_step_noise_measured.json --out runs/approach-sim
     python -m objectpilot.step_approach fly --class-name cup --weights models/yolo11s.pt --out runs/approach-01
+    python -m objectpilot.step_approach fly --listen --weights models/yolo11s.pt --out runs/approach-02
     python -m objectpilot.step_approach summary runs/approach-01/flight.jsonl
 
 `simulate` runs the same loop, guards included, against objectpilot.stepsim's geometric
@@ -73,16 +74,43 @@ class MemoryRecorder(Recorder):
 class ApproachFlight(FlightSession):
     """Guarded flight whose mission is the StepPlanner loop."""
 
-    def __init__(self, aircraft, plan, recorder, config=None, clock=time.monotonic, echo=print):
+    def __init__(self, aircraft, plan, recorder, config=None, clock=time.monotonic, echo=print, choose_target=None):
+        """choose_target: optional callable returning (label or None, attempt records), asked after
+        the operator confirmed and before takeoff (objectpilot.voice.voice_chooser)."""
         super().__init__(aircraft, plan, recorder, clock, echo)
         self.config = replace(config or approach_config(), label=plan.label)
         self.planner = StepPlanner(self.config)
         self.last_command_at = None
+        self.choose_target = choose_target
+
+    def before_takeoff(self):
+        if self.choose_target is None:
+            return
+        from .voice import save_wav
+        label, records = self.choose_target()
+        for record in records:
+            row = {k: v for k, v in record.items() if k != "audio"}
+            if "audio" in record and getattr(self.rec, "out", None) is not None:
+                row["wav"] = f"voice-{record['attempt']}.wav"
+                save_wav(self.rec.out/row["wav"], record["audio"])
+            self.rec.write(dict(event="voice", **row))
+        if label is None:
+            raise Abort("no_target")
+        self.set_target(label)
+
+    def set_target(self, label):
+        """Search for a different print: detector, flight plan and a fresh planner."""
+        self.a.set_label(label)
+        self.p = replace(self.p, label=label)
+        self.config = replace(self.config, label=label)
+        self.planner = StepPlanner(self.config)
+        self.note(f"target: {label}")
 
     def checklist(self):
         p, c = self.p, self.config
+        target = "the print you name after this confirmation" if self.choose_target else f"the {p.label} print"
         return f"""
-PLANNER APPROACH FLIGHT: StepPlanner flies the aircraft to the {p.label} print (at most {p.max_seconds/60:.0f} minutes).
+PLANNER APPROACH FLIGHT: StepPlanner flies the aircraft to {target} (at most {p.max_seconds/60:.0f} minutes).
   [ ] Propeller guards on; nobody within 2 m of the flight path except the operator
   [ ] Floor lit and textured under the whole path (downward positioning)
   [ ] Aircraft on the floor 1.5-3 m from the wall, within about 45 degrees of the print's normal (any heading)
@@ -221,11 +249,16 @@ def main(argv=None):
     sim.add_argument("--keep-logs", type=int, default=5, help="write flight.jsonl for the first N episodes")
     fly.add_argument("--height-cm", type=float, default=160.,
                      help="flight height by downward ToF: about the print center + 100 x stand-off x tan 10.5")
-    fly.add_argument("--class-name", default="cup")
+    fly.add_argument("--class-name", default=None, help="target label (default cup); not with --listen")
+    fly.add_argument("--listen", action="store_true",
+                     help="after the checklist, ask for the target by voice (laptop microphone) or typing")
+    fly.add_argument("--vocabulary", default=None, help="voice vocabulary JSON (default configs/voice_targets.json)")
+    fly.add_argument("--voice-models", default=None, help="folder with the Vosk models (default models/vosk)")
+    fly.add_argument("--mic", type=int, default=None, help="microphone device index (default: system default)")
     fly.add_argument("--weights", default="models/yolo11s.pt")
     fly.add_argument("--confidence", type=float, default=.25,
                      help="detector threshold; search candidates below the planner's 0.45 are centered and re-checked")
-    fly.add_argument("--imgsz", type=int, default=960, help="YOLO input width (TT video is 960x720)")
+    fly.add_argument("--imgsz", type=int, default=640, help="YOLO input size; small targets are also searched in crops")
     fly.add_argument("--host", default="192.168.10.1")
     fly.add_argument("--no-frames", action="store_true", help="do not save observed frames as JPEG")
     show.add_argument("log")
@@ -255,16 +288,30 @@ def main(argv=None):
             noise = replace(Noise(), **fields)
         simulate(seeds, a.out, plan, config, noise, a.keep_logs)
         return 0
+    if a.listen and a.class_name:
+        parser.error("--listen chooses the target by voice; leave out --class-name")
     if not sys.stdin.isatty():
         parser.error("fly needs an interactive terminal for the pre-flight confirmation")
-    plan = replace(plan, label=a.class_name)
+    chooser, vocabulary = None, None
+    if a.listen:
+        from .voice import load_vocabulary, voice_chooser
+        vocabulary = load_vocabulary(a.vocabulary)
+        try:
+            chooser = voice_chooser(vocabulary, a.voice_models, a.mic)   # loads before the network
+        except RuntimeError as exc:
+            parser.error(str(exc))
+    plan = replace(plan, label=a.class_name or (next(iter(vocabulary)) if vocabulary else "cup"))
     aircraft = TelloAircraft(a.host, a.weights, plan.label, a.confidence, a.imgsz)
+    if vocabulary and not set(vocabulary) <= aircraft.labels:
+        aircraft.close()
+        parser.error(f"vocabulary labels {sorted(set(vocabulary)-aircraft.labels)} are not detector classes")
     recorder = None
     try:
         recorder = Recorder(a.out, save_frames=not a.no_frames)
         recorder.write(dict(event="start", mode="fly", plan=asdict(plan), planner=asdict(config),
-                            weights=Path(a.weights).name, confidence=a.confidence))
-        ApproachFlight(aircraft, plan, recorder, config).run(confirm=terminal_confirm)
+                            weights=Path(a.weights).name, confidence=a.confidence,
+                            voice=dict(recognizer="vosk grammar", models=a.voice_models) if a.listen else None))
+        ApproachFlight(aircraft, plan, recorder, config, choose_target=chooser).run(confirm=terminal_confirm)
     finally:
         aircraft.close()
         if recorder:

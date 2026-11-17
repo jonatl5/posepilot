@@ -144,8 +144,11 @@ def test_weak_search_candidate_is_centered_then_confirmed_or_rejected():
     edge = obs(box=(.85, .3, .07, .12), conf=.30)           # small cup at the frame edge, below 0.45
     assert planner.decide(edge).reason == "search_candidate" and planner.decide(edge).command.startswith("cw ")
     centered_weak = obs(box=(.5, .3, .07, .12), conf=.30)
-    assert planner.decide(centered_weak).reason == "search_candidate"        # first centered look: wait
-    assert planner.decide(centered_weak).command == "cw 30"                  # second: rejected, search on
+    assert [planner.decide(centered_weak).command for _ in range(2)] == ["forward 40", "forward 40"]  # small: approach
+    assert planner.decide(centered_weak).reason == "search_candidate"        # then a centered look: wait
+    assert planner.decide(centered_weak).command == "cw 30"                  # still weak: rejected, search on
+    large_weak = StepPlanner()
+    assert large_weak.decide(obs(box=(.5, .3, .2, .3), conf=.30)).reason == "search_candidate"   # no approach
     confirmed = StepPlanner()
     assert confirmed.decide(obs(box=(.5, .3, .07, .12), conf=.6)).phase == "face"
 

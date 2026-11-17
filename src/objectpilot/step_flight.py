@@ -35,6 +35,7 @@ import numpy as np
 from .core import parse_ext_tof
 from .ground_link import GroundLink
 from .stepwise import check_command, fit_wall_normal, summarize
+from .vision import detect_tiled
 
 MAX_MOVE_CM = 100
 MAX_TURN_DEG = 90
@@ -216,7 +217,7 @@ class FlightSession:
         self.a, self.p, self.rec, self.clock, self.echo = aircraft, plan, recorder, clock, echo
         self.airborne = False
         self.errors = self.timeouts = self.commands = self.observations = 0
-        self.started = self.last = None
+        self.started = self.last = self.last_sent = None
 
     def checklist(self):
         return checklist(self.p)
@@ -224,12 +225,16 @@ class FlightSession:
     def mission(self):
         raise NotImplementedError
 
+    def before_takeoff(self):
+        """Runs after the operator confirmed, before takeoff; Abort here ends without flying."""
+
     def run(self, confirm):
         outcome = "completed"
         try:
             self.preflight()
             if not confirm(self.checklist()):
                 return self.finish("not_confirmed")
+            self.before_takeoff()
             self.started = self.clock()
             self.airborne = True             # from here on, always try to land
             reply = self.send("takeoff", "takeoff")
@@ -335,6 +340,7 @@ class FlightSession:
             if self.last["tof_m"]-check_command(command)[1]/100 < p.min_tof_m:
                 raise Abort("forward_blocked")
         start = self.clock()
+        self.last_sent = command
         reply = self.a.send(command, command_timeout(command, p.speed_cm_s))
         seconds = self.clock()-start
         self.commands += 1
@@ -368,6 +374,8 @@ class FlightSession:
                    yaw=obs.yaw_deg, conf=None if obs.conf is None else round(float(obs.conf), 3))
         if "truth" in raw:
             row["truth"] = raw["truth"]
+        if "detection" in raw:
+            row["detection"] = raw["detection"]
         self.last = self.rec.write(row, raw.get("images", ()))
         return self.last
 
@@ -385,6 +393,11 @@ class FlightSession:
         if state.get("bat") is not None and state["bat"] < p.min_battery:
             raise Abort("battery_low")
         height = height_cm(state)
+        if height is not None and height < p.min_height_cm and self.started is not None \
+                and not (self.last_sent or "").startswith("down"):
+            # November 15: at 32% the TT descended by itself (vgz -6 dm/s) and answered the next
+            # turn with "error Not joystick": its own low-battery landing, not a planner move.
+            raise Abort(f"aircraft_descending_on_its_own: {height:.0f} cm, battery {state.get('bat')}%")
         if height is None or not p.min_height_cm <= height <= p.max_height_cm:
             raise Abort("height_out_of_bounds")
         if obs["tof_m"] is not None and obs["tof_m"] < p.min_tof_m:
@@ -563,12 +576,15 @@ class CalibrationFlight(FlightSession):
 class TelloAircraft:
     """The delivered TT: FlightLink commands, UDP 8890 state, H.264 video and a YOLO detector."""
 
-    def __init__(self, host, weights, label, confidence=.45, imgsz=960):
+    def __init__(self, host, weights, label, confidence=.45, imgsz=640, tile_below_h=.2):
         from .tof_bench import StateListener
         from .vision import YOLODetector
-        # imgsz 960 is the TT stream width. At 640 a cup print at a frame edge 1.8 m away scored
-        # 0.16-0.43 in the November 13 search; at 960 it scored 0.36-0.60.
+        # While the target is unseen or small (box under tile_below_h of the frame height), each
+        # frame is also searched in four overlapping crops (objectpilot.vision.detect_tiled).
+        # On November 13-15 frames a single pass at 960 scored a cup at 1.8 m (frame edge) 0.08-0.66
+        # and at 2.5 m 0.04-0.07; full frame + crops at 640 scored 0.80-0.85 and median 0.37.
         self.detector = YOLODetector(weights, label, confidence, imgsz)   # load weights before any network use
+        self.tile_below_h, self.wide = tile_below_h, True
         # The first YOLO call takes seconds on a CPU; pay it here, not inside the first observation.
         self.detector.detect(np.zeros((720, 960, 3), np.uint8), 0., 0)
         self.link = FlightLink(host)
@@ -587,6 +603,16 @@ class TelloAircraft:
             return str(exc) or "error"
         except TimeoutError:
             return "timeout"
+
+    @property
+    def labels(self):
+        return set(self.detector.model.names.values())
+
+    def set_label(self, label):
+        """Retarget the detector, e.g. after the operator named the print."""
+        if label not in self.labels:
+            raise Abort(f"unknown_label: {label}")
+        self.detector.label = label
 
     def start(self):
         from .video import LatestVideo
@@ -618,7 +644,10 @@ class TelloAircraft:
                 time.sleep(.005)
                 continue
             self.last_frame_id = sample.frame_id
-            detections = self.detector.detect(sample.image, sample.captured_at, sample.frame_id)
+            if self.wide:
+                detections = detect_tiled(self.detector, sample.image, sample.captured_at, sample.frame_id)
+            else:
+                detections = self.detector.detect(sample.image, sample.captured_at, sample.frame_id)
             frames.append([(d.label, d.cx, d.cy, d.width, d.height, d.confidence) for d in detections])
             images.append(sample.image)
             deadline = time.monotonic()+3.
@@ -631,7 +660,11 @@ class TelloAircraft:
                 continue
             answered += 1
             tof.append(parse_ext_tof(reply, start).distance_m)
-        return dict(frames=frames, images=images, tof=tof, tof_answered=answered, state=self.state())
+        mode = "full+tiles" if self.wide else "full"
+        heights = [max((d for d in f if d[0] == self.detector.label), key=lambda d: d[5])[4]
+                   for f in frames if any(d[0] == self.detector.label for d in f)]
+        self.wide = not (len(heights) >= len(frames)/2 and heights and float(np.median(heights)) >= self.tile_below_h)
+        return dict(frames=frames, images=images, tof=tof, tof_answered=answered, state=self.state(), detection=mode)
 
     def close(self):
         if self.video:
@@ -658,6 +691,12 @@ class SimAircraft:
 
     def clock(self):
         return self.world.time
+
+    def set_label(self, label):
+        """Retarget: the test world's prints are labelled cup, bottle and bag."""
+        self.target = next((t for t in self.world.prints if t.label == label), None)
+        if self.target is None:
+            raise Abort(f"unknown_label: {label}")
 
     def send(self, command, timeout):
         if not permitted_flight(command):
@@ -959,7 +998,7 @@ def main(argv=None):
     rehearse.add_argument("--seed", type=int, default=60500)
     fly.add_argument("--weights", default="models/yolo11s.pt")
     fly.add_argument("--confidence", type=float, default=.45)
-    fly.add_argument("--imgsz", type=int, default=960, help="YOLO input width (TT video is 960x720)")
+    fly.add_argument("--imgsz", type=int, default=640, help="YOLO input size; small targets are also searched in crops")
     fly.add_argument("--host", default="192.168.10.1")
     fly.add_argument("--mission-pad", action="store_true", help="enable downward mission-pad detection (mon)")
     fly.add_argument("--no-frames", action="store_true", help="do not save observed frames as JPEG")

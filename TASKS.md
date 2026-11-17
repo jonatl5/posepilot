@@ -51,6 +51,13 @@ The canonical requirements are in [PRD.md](PRD.md). A checked software task is n
 - [x] Fly the planner approach (November 13): 1.5 m straight and 30° to the side arrived; the oblique start over-corrected (17 fine corrections); a search among distractors missed a cup seen at frame edges below 0.45 confidence ([STEP_APPROACH.md](research/STEP_APPROACH.md)).
 - [x] Reduce over-correction and fix the search: sweep span, no verify refit, hysteresis, correction budget, step learning, 30° search with candidates, 960 px inference, strafe-clearance and overshoot-safe forward rules; stand-off 0.50 m (simulated 96.3% with flight noise).
 - [ ] Fly the changed planner: 1.5 m straight, 30° to the side, then a search with distractors.
+- [x] Spoken target: laptop microphone, offline faster-whisper, English/Chinese vocabulary with synonyms and homophones, asked after the checklist and before takeoff (`objectpilot.voice`, `step_approach fly --listen`).
+- [x] Replace free Whisper transcription with Vosk grammar keyword recognition and WASAPI exclusive capture after two voice flights misheard "cup" (6/6 recorded clips now).
+- [x] Voiced-sound endpointing (keyboard clicks ignored), tiled detection for far or small targets, approach-to-confirm for weak search candidates (November 15 evening failures).
+- [x] Read the raw microphone through a callback (blocking reads dropped a third of the samples) and recognize the whole recording (November 16, `approach-voice-06`).
+- [ ] Fine-tune YOLO11s on TT-stream frames of the cup and bottle prints for starts beyond 2.5 m.
+- [x] Fly with `--listen`: "cup" recognized at confidence 1.0 on the second attempt, then arrived (November 16, `approach-voice-07`).
+- [ ] Try the spoken target with other voices, in the demo room, and with propeller noise nearby.
 - [ ] Screen detection against viewing angle (0–65°) and the bottle and third prints on the stand.
 - [ ] Measure physical command response, stopping drift, body/sensor offsets and battery effects.
 - [ ] Integrate one qualified flight sink, operator controls, confirmed landing and onboard link-loss behavior.

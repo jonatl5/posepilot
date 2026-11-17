@@ -6,11 +6,12 @@ Fly a RoboMaster TT to a printed picture on a wall and stop square in front of i
 
 ## Current route: stop-and-go step planner
 
-Hover, observe (6 frames, 6 forward ToF replies, the state-stream yaw), send one SDK step, repeat. A ToF yaw sweep finds the wall's normal so the aircraft squares up before the final approach. Status, flights and results: [website](https://jonatl5.github.io/posepilot/), [STEPWISE.md](research/STEPWISE.md), [STEP_FLIGHT.md](research/STEP_FLIGHT.md), [STEP_APPROACH.md](research/STEP_APPROACH.md).
+Hover, observe (6 frames, 6 forward ToF replies, the state-stream yaw), send one SDK step, repeat. A ToF yaw sweep finds the wall's normal so the aircraft squares up before the final approach. With `--listen`, the operator names the target by voice into the laptop microphone after the pre-flight checklist (offline Vosk keyword recognition from raw WASAPI capture, English or Chinese, fixed vocabulary in `configs/voice_targets.json`; `pip install -e '.[voice]'`, then `python -m objectpilot.voice download`). Status, flights and results: [website](https://jonatl5.github.io/posepilot/), [STEPWISE.md](research/STEPWISE.md), [STEP_FLIGHT.md](research/STEP_FLIGHT.md), [STEP_APPROACH.md](research/STEP_APPROACH.md).
 
 ```bash
 python -m objectpilot.step_approach simulate --episodes 300 --noise configs/tt_step_noise_measured.json --out runs/approach-sim
 python -m objectpilot.step_approach fly --class-name cup --weights models/yolo11s.pt --height-cm 157 --out runs/approach-01
+python -m objectpilot.step_approach fly --listen --weights models/yolo11s.pt --height-cm 157 --out runs/approach-02
 python -m objectpilot.step_flight fly --out runs/step-cal-02 --weights models/yolo11s.pt
 ```
 

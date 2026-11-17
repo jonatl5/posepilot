@@ -17,6 +17,7 @@ rl = ["stable-baselines3>=2.4,<3"]
 hardware = ["djitellopy>=2.5,<3", "pyserial>=3.5,<4"]
 test = ["pytest>=8,<10"]
 video = ["av>=12,<20"]
+voice = ["vosk>=0.3.45,<0.4", "sounddevice>=0.5,<1"]
 
 [project.scripts]
 objectpilot-demo = "objectpilot.demo:main"

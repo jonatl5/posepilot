@@ -1,0 +1,52 @@
+{
+ "about": "Spoken words per detector label for objectpilot.voice. Keys under targets must be YOLO class names. Chinese words are stored as JSON unicode escapes because the repository check keeps tracked files ASCII; they cover simplified and traditional forms and common mis-hearings (homophones) of the target word. Print the decoded list with: python -m objectpilot.voice words",
+ "targets": {
+  "cup": [
+   "cup",
+   "mug",
+   "coffee cup",
+   "tea cup",
+   "teacup",
+   "\u676f\u5b50",
+   "\u676f",
+   "\u6c34\u676f",
+   "\u8336\u676f",
+   "\u9a6c\u514b\u676f",
+   "\u99ac\u514b\u676f",
+   "\u5496\u5561\u676f",
+   "\u88ab\u5b50",
+   "\u80cc\u5b50"
+  ],
+  "bottle": [
+   "bottle",
+   "water bottle",
+   "plastic bottle",
+   "\u74f6\u5b50",
+   "\u74f6",
+   "\u6c34\u74f6",
+   "\u6c34\u58f6",
+   "\u6c34\u58fa",
+   "\u77ff\u6cc9\u6c34",
+   "\u7926\u6cc9\u6c34",
+   "\u996e\u6599\u74f6",
+   "\u98f2\u6599\u74f6",
+   "\u5e73\u5b50"
+  ],
+  "handbag": [
+   "bag",
+   "handbag",
+   "backpack",
+   "school bag",
+   "schoolbag",
+   "purse",
+   "\u5305",
+   "\u5305\u5305",
+   "\u4e66\u5305",
+   "\u66f8\u5305",
+   "\u80cc\u5305",
+   "\u624b\u63d0\u5305",
+   "\u53cc\u80a9\u5305",
+   "\u96d9\u80a9\u5305"
+  ]
+ }
+}
