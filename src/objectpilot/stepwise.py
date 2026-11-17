@@ -110,6 +110,8 @@ class StepConfig:
     search_deg: int = 30            # a target is always within 15 degrees of some view's center
     confirm_conf: float = .45       # a search candidate must reach this once centered; weaker boxes are candidates
     candidate_checks: int = 2       # centered looks at a weak candidate before it is rejected
+    candidate_steps: int = 2        # forward steps toward a small weak candidate before those looks
+    candidate_step_m: float = .40
     center_x: float = .05           # yaw-centering tolerance before stepping forward
     lateral_tol_m: float = .04
     max_strafe_m: float = .40       # longer strafes are split and re-checked
@@ -160,7 +162,7 @@ class StepPlanner:
         self.lateral_m = 0.
         self.pending = self.current_tof = None
         self.turn_shortfalls, self.move_scales, self.rejected = [], [], []
-        self.candidate_looks = self.fine_steps = self.center_steps = 0
+        self.candidate_looks = self.candidate_moves = self.fine_steps = self.center_steps = 0
         self.reached_final = False
         self.outcome = None
 
@@ -345,14 +347,20 @@ class StepPlanner:
                 box = None
             elif abs(ex) > c.center_x:
                 return self._yaw_to_ex(ex, "search_candidate")
+            elif box[3] < c.sweep_box_h and self.candidate_moves < c.candidate_steps:
+                # Small and weak: far away, and detectors score a print higher once it is larger
+                # (cup at 2.5 m: median 0.3; at 1.8 m: 0.5-0.9). Step toward it and look again.
+                self.candidate_moves += 1
+                return self._forward(obs, c.candidate_step_m, "candidate_approach")
             else:
                 self.candidate_looks += 1
                 if self.candidate_looks < c.candidate_checks:
                     return self._wait("search_candidate")
                 self.rejected.append(bearing)
-                self.candidate_looks, box = 0, None
+                self.candidate_looks, self.candidate_moves, box = 0, 0, None
         if box is not None:
-            self.phase, self.search_turned, self.lost_turns, self.candidate_looks = "face", 0, 0, 0
+            self.phase, self.search_turned, self.lost_turns = "face", 0, 0
+            self.candidate_looks = self.candidate_moves = 0
             return self._face(obs, box)
         if self.search_turned >= 360:
             return self._end("not_found")

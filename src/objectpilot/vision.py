@@ -1,5 +1,6 @@
 """YOLO adapter and conservative same-class association; no person/pose path."""
 import math
+from dataclasses import replace
 from .core import Detection
 
 def iou(a,b):
@@ -91,3 +92,26 @@ class MarkerDetector:
         return [Detection(float((x+bw/2)/w), float((y+bh/2)/h), float(bw/w), float(bh/h),
                           1., timestamp, frame_id, label)
                 for x, y, bw, bh, label in boxes if bw > 0 and bh > 0]
+
+
+def tile_boxes(width, height, frac=2/3):
+    """Four overlapping crops (x0, y0, x1, y1), each `frac` of the frame on a side."""
+    cw, ch = int(round(width*frac)), int(round(height*frac))
+    return [(x0, y0, x0+cw, y0+ch) for y0 in (0, height-ch) for x0 in (0, width-cw)]
+
+
+def detect_tiled(detector, frame, timestamp, frame_id, frac=2/3):
+    """Detections on the full frame and on four overlapping crops, in full-frame coordinates.
+
+    A print far away is about 50 px wide in the 960x720 TT stream, and YOLO11s scores it
+    erratically there: on the November 15 2.5 m search frames the cup scored 0.04-0.07 at
+    imgsz 960 and was detected in 0 of 6 frames, against 5 of 6 (median 0.37) on 2/3 crops at
+    640. Any object under a third of the frame lies whole inside one crop.
+    """
+    h, w = frame.shape[:2]
+    out = list(detector.detect(frame, timestamp, frame_id))
+    for x0, y0, x1, y1 in tile_boxes(w, h, frac):
+        cw, ch = x1-x0, y1-y0
+        for d in detector.detect(frame[y0:y1, x0:x1], timestamp, frame_id):
+            out.append(replace(d, cx=(x0+d.cx*cw)/w, cy=(y0+d.cy*ch)/h, width=d.width*cw/w, height=d.height*ch/h))
+    return out
